@@ -1,0 +1,27 @@
+<resources>
+    <string name="app_name">Popular Movies</string>
+    <string name="movie_poster_content_description">Movie Poster</string>
+    <string name="detail_original_movie_title">Original Movie Title:</string>
+    <string name="detail_plot_synopsis">Plot Synopsis:</string>
+    <string name="detail_user_rating">User Rating:</string>
+    <string name="detail_release_date">Release Date:</string>
+    <string name="action_most_popular">Most Popular</string>
+    <string name="action_highest_rated">Highest Rated</string>
+    <string name="no_internet">No internet connection</string>
+    <string name="close_on_error">Something went wrong…</string>
+    <string name="error_no_movies_found">Something went wrong...  No movies found!</string>
+    <string name="button_description_mark_as_favorite">Mark as Favorite</string>
+    <string name="end_format_for_rating">/10</string>
+    <string name="trailers_label">Trailers</string>
+    <string name="movie_trailer_content_description">Movie Trailer</string>
+    <string name="date_seperator_string">-</string>
+    <string name="sp_key_sort_order">sort_order</string>
+    <string name="pref_sort_order_label">Sort Order</string>
+    <string name="sp_key_show_favorites">show_favorites</string>
+    <string name="pref_show_favorites_label">Show Favorites</string>
+    <string name="pref_show_favorites_summary_off">Show all items from Web</string>
+    <string name="pref_show_favorites_summary_on">Show only Favorites</string>
+    <string name="action_settings">Settings</string>
+    <string name="array_value_most_popular">most_popular</string>
+    <string name="array_value_highest_rated">highest_rated</string>
+</resources>

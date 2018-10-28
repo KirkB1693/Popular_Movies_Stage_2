@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content" android:layout_height="wrap_content"
+    >
+    <ImageView
+        android:layout_width="@dimen/movie_poster_width"
+        android:layout_height="100dp"
+        android:layout_margin="@dimen/poster_layout_margin"
+        android:scaleType="fitCenter"
+        android:id="@+id/iv_movie_trailer"
+        android:contentDescription="@string/movie_trailer_content_description"/>
+
+</FrameLayout>

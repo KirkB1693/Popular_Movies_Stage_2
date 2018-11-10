@@ -33,7 +33,7 @@
             android:layout_marginRight="8dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@+id/iv_movie_poster_detail"
-            app:layout_constraintTop_toBottomOf="@+id/imageButtonFavoriteMovie"
+            app:layout_constraintTop_toBottomOf="@+id/checkBoxFavoriteMovie"
             tools:text="@string/detail_original_movie_title" />
 
         <TextView
@@ -71,8 +71,8 @@
             app:layout_constraintTop_toBottomOf="@+id/tv_original_title"
             tools:text="@string/detail_release_date" />
 
-        <ImageButton
-            android:id="@+id/imageButtonFavoriteMovie"
+        <CheckBox
+            android:id="@+id/checkBoxFavoriteMovie"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
@@ -80,12 +80,12 @@
             android:layout_marginTop="24dp"
             android:layout_marginEnd="8dp"
             android:layout_marginRight="8dp"
-            android:background="@android:color/white"
+            android:background="@android:color/transparent"
             android:contentDescription="@string/button_description_mark_as_favorite"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@+id/iv_movie_poster_detail"
             app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@android:drawable/btn_star" />
+            android:button="@android:drawable/btn_star" />
 
     </android.support.constraint.ConstraintLayout>
 </layout>

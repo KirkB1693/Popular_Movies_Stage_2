@@ -24,4 +24,10 @@
     <string name="action_settings">Settings</string>
     <string name="array_value_most_popular">most_popular</string>
     <string name="array_value_highest_rated">highest_rated</string>
+    <string name="pref_enable_notifications_key">enable_notifications</string>
+    <string name="pref_enable_notifications_false">Not Enabled</string>
+    <string name="pref_enable_notifications_true">Enabled</string>
+    <string name="pref_enable_notifications_label">Movie Notifications</string>
+    <string name="content_authority">com.example.android.popmovies</string>
+    <string name="error_no_trailers_found">Something went wrong...  No trailers found!</string>
 </resources>

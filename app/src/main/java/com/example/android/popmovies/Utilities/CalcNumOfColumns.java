@@ -1,9 +1,11 @@
-package com.example.android.popmovies;
+package com.example.android.popmovies.Utilities;
 
 import android.content.Context;
 import android.util.DisplayMetrics;
 
-class Utility {
+import com.example.android.popmovies.R;
+
+public class CalcNumOfColumns {
     public static int calculateNoOfColumns(Context context) {
         DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
         float dpWidth = displayMetrics.widthPixels / displayMetrics.density;

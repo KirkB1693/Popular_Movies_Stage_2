@@ -1,4 +1,4 @@
-package com.example.android.popmovies;
+package com.example.android.popmovies.Adapters;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
@@ -9,17 +9,19 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.example.android.popmovies.Data.MovieUrlConstants;
+import com.example.android.popmovies.JsonResponseModels.VideosModel;
+import com.example.android.popmovies.R;
 import com.squareup.picasso.Picasso;
 
 import java.util.List;
 
 public class TrailerRecyclerViewAdapter extends RecyclerView.Adapter<TrailerRecyclerViewAdapter.ViewHolder> {
-    private List<String> mTrailerIds;
+    private List<VideosModel> mTrailerIds;
     private TrailerRecyclerViewAdapter.TrailerItemClickListener mClickListener;
     private final Context mContext;
 
     // data is passed into the constructor
-    TrailerRecyclerViewAdapter(Context context, List<String> trailerIds) {
+    public TrailerRecyclerViewAdapter(Context context, List<VideosModel> trailerIds) {
         this.mTrailerIds = trailerIds;
         this.mContext = context;
     }
@@ -35,9 +37,9 @@ public class TrailerRecyclerViewAdapter extends RecyclerView.Adapter<TrailerRecy
     // binds the image to the ImageView in each cell
     @Override
     public void onBindViewHolder(@NonNull TrailerRecyclerViewAdapter.ViewHolder holder, int position) {
-        String trailerId = mTrailerIds.get(position);
+        VideosModel trailerId = mTrailerIds.get(position);
         holder.itemView.setTag(trailerId);
-        String fullTrailerThumbnailPath = MovieUrlConstants.BASE_YOUTUBE_THUMBNAIL_URL + trailerId + MovieUrlConstants.YOUTUBE_THUMBNAIL_OPTION;
+        String fullTrailerThumbnailPath = MovieUrlConstants.BASE_YOUTUBE_THUMBNAIL_URL + trailerId.getKey() + MovieUrlConstants.YOUTUBE_THUMBNAIL_OPTION;
         Picasso.with(mContext).load(fullTrailerThumbnailPath).into(holder.myImageView);
 
     }
@@ -66,17 +68,17 @@ public class TrailerRecyclerViewAdapter extends RecyclerView.Adapter<TrailerRecy
     }
 
     // convenience method for getting data at click position
-    String getItem(int id) {
-        return mTrailerIds.get(id);
+    public String getItem(int id) {
+        return mTrailerIds.get(id).getKey();
     }
 
-    void setMovieData (List<String> trailerIds){
+    void setMovieData (List<VideosModel> trailerIds){
         mTrailerIds = trailerIds;
         notifyDataSetChanged();
     }
 
     // allows clicks events to be caught
-    void setClickListener(TrailerRecyclerViewAdapter.TrailerItemClickListener itemClickListener) {
+    public void setClickListener(TrailerRecyclerViewAdapter.TrailerItemClickListener itemClickListener) {
         this.mClickListener = itemClickListener;
     }
 

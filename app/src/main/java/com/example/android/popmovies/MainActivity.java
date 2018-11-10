@@ -1,32 +1,39 @@
 package com.example.android.popmovies;
 
-import android.app.LoaderManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.Loader;
 import android.content.SharedPreferences;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.net.Uri;
+import android.databinding.DataBindingUtil;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ProgressBar;
-import android.widget.TextView;
+import android.widget.Toast;
 
+import com.example.android.popmovies.Adapters.MovieRecyclerViewAdapter;
 import com.example.android.popmovies.Data.MovieUrlConstants;
+import com.example.android.popmovies.JsonResponseModels.MoviesModel;
+import com.example.android.popmovies.JsonResponseModels.MoviesResponse;
+import com.example.android.popmovies.Utilities.ApiClient;
+import com.example.android.popmovies.Utilities.ApiService;
+import com.example.android.popmovies.Utilities.CalcNumOfColumns;
+import com.example.android.popmovies.Utilities.ConnectedToInternet;
+import com.example.android.popmovies.databinding.ActivityMainBinding;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements MovieRecyclerViewAdapter.ItemClickListener, LoaderManager.LoaderCallbacks<List<Movies>> {
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+
+public class MainActivity extends AppCompatActivity implements SharedPreferences.OnSharedPreferenceChangeListener, MovieRecyclerViewAdapter.ItemClickListener {
 
     private static final String LOG_TAG = MainActivity.class.getName();
 
@@ -41,81 +48,54 @@ public class MainActivity extends AppCompatActivity implements MovieRecyclerView
      */
     private MovieRecyclerViewAdapter mRecyclerAdapter;
 
-    private TextView mEmptyStateTextView;
+    private boolean mDisplayFavorites;
 
-    private ProgressBar mProgressBarView;
-
-    private String mSortOrder;
-
-    private RecyclerView mMovieRecyclerView;
+    ActivityMainBinding mMainBinding;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mMainBinding = DataBindingUtil.setContentView(this, R.layout.activity_main);
 
+        mDisplayFavorites = getDisplayFavoritesFromPreferences(this);
 
-        mSortOrder = getSortOrderFromPreferences(this);
+        mMainBinding.empty.setVisibility(View.VISIBLE);
 
-        // Find a reference to the {@link RecyclerView} in the layout
-        mMovieRecyclerView = (RecyclerView) findViewById(R.id.rv_movie_poster_grid);
+        int mNoOfColumns = CalcNumOfColumns.calculateNoOfColumns(getApplicationContext());
+        GridLayoutManager mMovieRecyclerViewLayoutManager = new GridLayoutManager(this, mNoOfColumns, LinearLayoutManager.VERTICAL, false);
+        mMainBinding.rvMoviePosterGrid.setLayoutManager(mMovieRecyclerViewLayoutManager);
+        mMainBinding.rvMoviePosterGrid.setHasFixedSize(true);
+        mRecyclerAdapter = new MovieRecyclerViewAdapter(this, new ArrayList<MoviesModel>());
+        mRecyclerAdapter.setClickListener(this);
+        mMainBinding.rvMoviePosterGrid.setAdapter(mRecyclerAdapter);
 
-
-        mEmptyStateTextView = (TextView) findViewById(R.id.empty);
-
-        mProgressBarView = (ProgressBar) findViewById(R.id.progress);
-
-        mEmptyStateTextView.setVisibility(View.VISIBLE);
-
-        ConnectivityManager cm = (ConnectivityManager) this.getSystemService(Context.CONNECTIVITY_SERVICE);
-
-        assert cm != null;
-        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-
-        boolean isConnected = activeNetwork != null &&
-                activeNetwork.isConnectedOrConnecting();
-
-        if (isConnected) {
+        if (ConnectedToInternet.isConnectedToInternet(this) && !mDisplayFavorites) {
             // Create a new adapter that takes an empty list of movies as input
-            int mNoOfColumns = Utility.calculateNoOfColumns(getApplicationContext());
-            GridLayoutManager mMovieRecyclerViewLayoutManager = new GridLayoutManager(this, mNoOfColumns, LinearLayoutManager.VERTICAL, false);
-            mMovieRecyclerView.setLayoutManager(mMovieRecyclerViewLayoutManager);
-            mMovieRecyclerView.setHasFixedSize(true);
-            mRecyclerAdapter = new MovieRecyclerViewAdapter(this, new ArrayList<Movies>());
-            mRecyclerAdapter.setClickListener(this);
-            mMovieRecyclerView.setAdapter(mRecyclerAdapter);
+            updateUiFromWeb();
 
-            // Get a reference to the LoaderManager, in order to interact with loaders.
-            LoaderManager loaderManager = getLoaderManager();
-
-            // Initialize the loader. Pass in the int ID constant defined above and pass in null for
-            // the bundle. Pass in this activity for the LoaderCallbacks parameter (which is valid
-            // because this activity implements the LoaderCallbacks interface).
-            Log.i(LOG_TAG, "TEST:  Loader initialized");
-            loaderManager.initLoader(MOVIE_LOADER_ID, null, this);
-
-
+        } else if (mDisplayFavorites) {
+            updateUiFromFavorites();
         } else {
             // Set progress bar and recycler view visibility to gone
             showEmptyState();
             // Set empty state text to display "No internet connection."
-            mEmptyStateTextView.setText(R.string.no_internet);
+            mMainBinding.empty.setText(R.string.no_internet);
 
         }
 
 
     }
 
+    private void updateUiFromFavorites() {
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
 
-        String currentSortOrder = getSortOrderFromPreferences(this);
-        if (currentSortOrder != mSortOrder) {
-            mSortOrder = currentSortOrder;
-            getLoaderManager().restartLoader(MOVIE_LOADER_ID, null, this);
-        }
+        checkPreferences();
 
     }
 
@@ -133,58 +113,114 @@ public class MainActivity extends AppCompatActivity implements MovieRecyclerView
         }
     }
 
-    private void launchDetailActivity(Movies currentMovie) {
+    public static boolean getDisplayFavoritesFromPreferences(Context context) {
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+
+        String keyForDisplayFavorites = context.getString(R.string.sp_key_show_favorites);
+        boolean defaultDisplayFavorites = context.getResources().getBoolean(R.bool.pref_show_favorite_default);
+
+        return sp.getBoolean(keyForDisplayFavorites, defaultDisplayFavorites);
+    }
+
+    private void launchDetailActivity(MoviesModel currentMovie) {
         Intent intent = new Intent(this, DetailActivity.class);
         intent.putExtra(DetailActivity.CURRENT_MOVIE, currentMovie);
         startActivity(intent);
     }
 
+
+
     @Override
-    public Loader<List<Movies>> onCreateLoader(int i, Bundle bundle) {
-        showProgressBar();
-
-        Uri baseUri = Uri.parse(MovieUrlConstants.BASE_SEARCH_URL);
-        Uri.Builder uriBuilder = baseUri.buildUpon();
-
-
-        uriBuilder.appendEncodedPath(mSortOrder);
-        uriBuilder.appendQueryParameter(MovieUrlConstants.API_PARAM, MovieUrlConstants.API_KEY);
-        uriBuilder.appendQueryParameter(MovieUrlConstants.LANGUAGE_PARAM, MovieUrlConstants.DEFAULT_LANGUAGE);
-
-
-        return new MovieLoader(this, uriBuilder.toString());
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String s) {
+        Log.d(LOG_TAG, "Preferences updated");
+        checkPreferences();
     }
 
-    @Override
-    public void onLoadFinished(Loader<List<Movies>> loader, List<Movies> movies) {
+    private void checkPreferences() {
+        mDisplayFavorites = getDisplayFavoritesFromPreferences(this);
+
+        if (ConnectedToInternet.isConnectedToInternet(this) && !mDisplayFavorites) {
+            // Create a new adapter that takes an empty list of movies as input
+            updateUiFromWeb();
+
+        } else if (mDisplayFavorites) {
+            updateUiFromFavorites();
+        } else {
+            // Set progress bar and recycler view visibility to gone
+            showEmptyState();
+            // Set empty state text to display "No internet connection."
+            mMainBinding.empty.setText(R.string.no_internet);
+
+        }
+    }
+
+
+
+    public void updateUiFromWeb() {
         // Clear the adapter of previous movie data
         mRecyclerAdapter.clear();
-
         // Set progress bar view visibility to gone
-        mProgressBarView.setVisibility(View.GONE);
+        mMainBinding.progress.setVisibility(View.GONE);
 
-        // Set empty state text to display "No movies found."
-        if (movies == null || movies.isEmpty()) {
-            showEmptyState();
-            mEmptyStateTextView.setText(R.string.error_no_movies_found);
-        }
+        loadMoviesFromWeb();
+
         Log.i(LOG_TAG, "TEST: onLoadFinished() executed");
 
-        // If there is a valid list of {@link Movies}s, then add them to the adapter's
-        // data set. This will trigger the RecyclerView Grid to update.
-        if (movies != null && !movies.isEmpty()) {
-            showMovieGridView();
-            mRecyclerAdapter.setMovieData(movies);
+
+    }
+
+    private void loadMoviesFromWeb() {
+        try {
+            if (BuildConfig.API_KEY.isEmpty()) {
+                Toast.makeText(getApplicationContext(), "API Key not found!!! Please obtain API Key from themoviedb.org", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            showProgressBar();
+            Retrofit retrofit = ApiClient.getClient();
+            ApiService apiService = retrofit.create(ApiService.class);
+
+            String sortPreference = getSortOrderFromPreferences(this);
+            Call<MoviesResponse> call = null;
+            if (sortPreference.equals(MovieUrlConstants.SORT_BY_DEFAULT)) {
+                call = apiService.getPopularMovies(BuildConfig.API_KEY);
+            } else {
+                call = apiService.getTopRatedMovies(BuildConfig.API_KEY);
+            }
+
+            call.enqueue(new Callback<MoviesResponse>() {
+                @Override
+                public void onResponse(Call<MoviesResponse> call, Response<MoviesResponse> response) {
+                    List<MoviesModel> moviesModelList = response.body().getResults();
+                    // Set empty state text to display "No movies found."
+                    if (moviesModelList == null || moviesModelList.isEmpty()) {
+                        showEmptyState();
+                        mMainBinding.empty.setText(R.string.error_no_movies_found);
+                    }
+                    // If there is a valid list of {@link MoviesModel}s, then add them to the adapter's
+                    // data set. This will trigger the RecyclerView Grid to update.
+                    if (moviesModelList != null && !moviesModelList.isEmpty()) {
+                        showMovieGridView();
+                        mRecyclerAdapter.setMovieData(moviesModelList);
+                    }
+
+
+                }
+
+                @Override
+                public void onFailure(Call<MoviesResponse> call, Throwable t) {
+                    Log.d("Error", t.getMessage());
+                    Toast.makeText(MainActivity.this, "Error Fetching Data!", Toast.LENGTH_SHORT).show();
+
+                }
+            });
+        } catch (Exception e) {
+            Log.d("Error", e.getMessage());
+            Toast.makeText(this, e.toString(), Toast.LENGTH_SHORT).show();
         }
-
     }
 
-    @Override
-    public void onLoaderReset(Loader<List<Movies>> loader) {
-        Log.i(LOG_TAG, "TEST: onLoaderReset() executed");
-        // Loader reset, so we can clear out our existing data.
-        mRecyclerAdapter.clear();
-    }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -196,15 +232,7 @@ public class MainActivity extends AppCompatActivity implements MovieRecyclerView
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
 
-        ConnectivityManager cm = (ConnectivityManager) this.getSystemService(Context.CONNECTIVITY_SERVICE);
-
-        assert cm != null;
-        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-
-        boolean isConnected = activeNetwork != null &&
-                activeNetwork.isConnectedOrConnecting();
-
-        if (isConnected) {
+        if (ConnectedToInternet.isConnectedToInternet(this)) {
             switch (id) {
                 case R.id.settings:
                     startActivity(new Intent(this, SettingsActivity.class));
@@ -213,7 +241,7 @@ public class MainActivity extends AppCompatActivity implements MovieRecyclerView
         } else {
             showEmptyState();
             // Set empty state text to display "No internet connection."
-            mEmptyStateTextView.setText(R.string.no_internet);
+            mMainBinding.empty.setText(R.string.no_internet);
         }
 
         return super.onOptionsItemSelected(item);
@@ -222,28 +250,28 @@ public class MainActivity extends AppCompatActivity implements MovieRecyclerView
 
     @Override
     public void onItemClick(int position) {
-        Movies currentMovie = mRecyclerAdapter.getItem(position);
+        MoviesModel currentMovie = mRecyclerAdapter.getItem(position);
         if (currentMovie != null) {
             launchDetailActivity(currentMovie);
         }
     }
 
     private void showEmptyState() {
-        mMovieRecyclerView.setVisibility(View.INVISIBLE);
-        mProgressBarView.setVisibility(View.INVISIBLE);
-        mEmptyStateTextView.setVisibility(View.VISIBLE);
+        mMainBinding.rvMoviePosterGrid.setVisibility(View.INVISIBLE);
+        mMainBinding.progress.setVisibility(View.INVISIBLE);
+        mMainBinding.empty.setVisibility(View.VISIBLE);
     }
 
     private void showProgressBar() {
-        mMovieRecyclerView.setVisibility(View.INVISIBLE);
-        mProgressBarView.setVisibility(View.VISIBLE);
-        mEmptyStateTextView.setVisibility(View.INVISIBLE);
+        mMainBinding.rvMoviePosterGrid.setVisibility(View.INVISIBLE);
+        mMainBinding.progress.setVisibility(View.VISIBLE);
+        mMainBinding.empty.setVisibility(View.INVISIBLE);
     }
 
     private void showMovieGridView() {
-        mMovieRecyclerView.setVisibility(View.VISIBLE);
-        mProgressBarView.setVisibility(View.INVISIBLE);
-        mEmptyStateTextView.setVisibility(View.INVISIBLE);
+        mMainBinding.rvMoviePosterGrid.setVisibility(View.VISIBLE);
+        mMainBinding.progress.setVisibility(View.INVISIBLE);
+        mMainBinding.empty.setVisibility(View.INVISIBLE);
     }
 }
 

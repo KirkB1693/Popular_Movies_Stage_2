@@ -1,4 +1,4 @@
-package com.example.android.popmovies;
+package com.example.android.popmovies.Adapters;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
@@ -9,18 +9,20 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.example.android.popmovies.Data.MovieUrlConstants;
+import com.example.android.popmovies.JsonResponseModels.MoviesModel;
+import com.example.android.popmovies.R;
 import com.squareup.picasso.Picasso;
 
 import java.util.List;
 
 public class MovieRecyclerViewAdapter extends RecyclerView.Adapter<MovieRecyclerViewAdapter.ViewHolder> {
 
-    private List<Movies> mMovies;
+    private List<MoviesModel> mMovies;
     private ItemClickListener mClickListener;
     private final Context mContext;
 
     // data is passed into the constructor
-    MovieRecyclerViewAdapter(Context context, List<Movies> movies) {
+    public MovieRecyclerViewAdapter(Context context, List<MoviesModel> movies) {
         this.mMovies = movies;
         this.mContext = context;
     }
@@ -37,8 +39,8 @@ public class MovieRecyclerViewAdapter extends RecyclerView.Adapter<MovieRecycler
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         holder.itemView.setTag(mMovies.get(position));
-        Movies movie = mMovies.get(position);
-        String fullPosterPath = MovieUrlConstants.BASE_POSTER_URL + MovieUrlConstants.DEFAULT_POSTER_SIZE + movie.poster_path;
+        MoviesModel movie = mMovies.get(position);
+        String fullPosterPath = MovieUrlConstants.BASE_POSTER_URL + MovieUrlConstants.DEFAULT_POSTER_SIZE + movie.getPosterPath();
         Picasso.with(mContext).load(fullPosterPath).into(holder.myImageView);
 
     }
@@ -67,17 +69,17 @@ public class MovieRecyclerViewAdapter extends RecyclerView.Adapter<MovieRecycler
     }
 
     // convenience method for getting data at click position
-    Movies getItem(int id) {
+    public MoviesModel getItem(int id) {
         return mMovies.get(id);
     }
 
-    void setMovieData (List<Movies> movies){
+    public void setMovieData(List<MoviesModel> movies){
         mMovies = movies;
         notifyDataSetChanged();
     }
 
     // allows clicks events to be caught
-    void setClickListener(ItemClickListener itemClickListener) {
+    public void setClickListener(ItemClickListener itemClickListener) {
         this.mClickListener = itemClickListener;
     }
 

@@ -1,4 +1,4 @@
-package com.example.android.popmovies;
+package com.example.android.popmovies.Adapters;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
@@ -8,21 +8,20 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.example.android.popmovies.JsonResponseModels.ReviewsModel;
+import com.example.android.popmovies.R;
+
 import java.util.List;
 
 public class ReviewRecyclerViewAdapter extends RecyclerView.Adapter<ReviewRecyclerViewAdapter.ViewHolder> {
-    private List<String> mReviewAuthors;
-    private List<String> mReviewContent;
-    private List<String> mReviewUrl;
+    private List<ReviewsModel> mReviews;
     private ReviewRecyclerViewAdapter.ReviewItemClickListener mClickListener;
     private final Context mContext;
 
 
     // data is passed into the constructor
-    ReviewRecyclerViewAdapter(Context context, List<String> reviewAuthors, List<String> reviewContent, List<String> reviewUrl) {
-        this.mReviewAuthors = reviewAuthors;
-        this.mReviewContent = reviewContent;
-        this.mReviewUrl = reviewUrl;
+    public ReviewRecyclerViewAdapter(Context context, List<ReviewsModel> reviews) {
+        this.mReviews = reviews;
         this.mContext = context;
     }
 
@@ -37,8 +36,8 @@ public class ReviewRecyclerViewAdapter extends RecyclerView.Adapter<ReviewRecycl
     // binds the image to the ImageView in each cell
     @Override
     public void onBindViewHolder(@NonNull ReviewRecyclerViewAdapter.ViewHolder holder, int position) {
-        String reviewAuthor = mReviewAuthors.get(position);
-        String reviewContent = mReviewContent.get(position);
+        String reviewAuthor = mReviews.get(position).getAuthor();
+        String reviewContent = mReviews.get(position).getContent();
         holder.itemView.setTag(reviewAuthor);
         holder.myAuthorTextView.setText(reviewAuthor);
         holder.myContentTextView.setText(reviewContent);
@@ -48,7 +47,7 @@ public class ReviewRecyclerViewAdapter extends RecyclerView.Adapter<ReviewRecycl
     // total number of cells
     @Override
     public int getItemCount() {
-        return mReviewAuthors.size();
+        return mReviews.size();
     }
 
 
@@ -71,19 +70,17 @@ public class ReviewRecyclerViewAdapter extends RecyclerView.Adapter<ReviewRecycl
     }
 
     // convenience method for getting data at click position
-    String getItem(int id) {
-        return mReviewUrl.get(id);
+    public String getItem(int id) {
+        return mReviews.get(id).getUrl();
     }
 
-    void setReviewData (List<String> reviewAuthors, List<String> reviewContent, List<String> reviewUrl){
-        mReviewAuthors = reviewAuthors;
-        mReviewContent = reviewContent;
-        mReviewUrl = reviewUrl;
+    void setReviewData (List<ReviewsModel> reviews){
+        mReviews = reviews;
         notifyDataSetChanged();
     }
 
     // allows clicks events to be caught
-    void setClickListener(ReviewRecyclerViewAdapter.ReviewItemClickListener itemClickListener) {
+    public void setClickListener(ReviewRecyclerViewAdapter.ReviewItemClickListener itemClickListener) {
         this.mClickListener = itemClickListener;
     }
 

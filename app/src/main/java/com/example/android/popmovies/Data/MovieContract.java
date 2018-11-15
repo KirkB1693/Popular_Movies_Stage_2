@@ -59,13 +59,9 @@ public class MovieContract {
 
         public static final String COLUMN_BACKDROP = "backdrop";
 
-        public static final String COLUMN_TRAILER_IDS = "trailer_ids";
+        public static final String COLUMN_POSTER_PATH = "poster_path";
 
-        public static final String COLUMN_REVIEW_AUTHORS = "review_authors";
-
-        public static final String COLUMN_REVIEW_CONTENTS = "review_contents";
-
-        public static final String COLUMN_REVIEW_URLS = "review_urls";
+        public static final String COLUMN_BACKDROP_PATH = "backdrop_path";
 
         /**
          * Builds a URI that adds the movie id to the end of the movie content URI path.

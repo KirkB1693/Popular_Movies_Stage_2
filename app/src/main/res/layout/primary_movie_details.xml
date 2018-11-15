@@ -85,7 +85,8 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@+id/iv_movie_poster_detail"
             app:layout_constraintTop_toTopOf="parent"
-            android:button="@android:drawable/btn_star" />
+            android:button="@android:drawable/btn_star"
+            android:onClick="onFavoriteCheckboxClicked"/>
 
     </android.support.constraint.ConstraintLayout>
 </layout>

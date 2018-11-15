@@ -1,11 +1,12 @@
 package com.example.android.popmovies;
 
-import android.content.Context;
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.databinding.DataBindingUtil;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
@@ -19,10 +20,13 @@ import com.example.android.popmovies.Adapters.MovieRecyclerViewAdapter;
 import com.example.android.popmovies.Data.MovieUrlConstants;
 import com.example.android.popmovies.JsonResponseModels.MoviesModel;
 import com.example.android.popmovies.JsonResponseModels.MoviesResponse;
+import com.example.android.popmovies.RoomDatabase.FavoriteMovieEntry;
 import com.example.android.popmovies.Utilities.ApiClient;
 import com.example.android.popmovies.Utilities.ApiService;
 import com.example.android.popmovies.Utilities.CalcNumOfColumns;
+import com.example.android.popmovies.Utilities.CheckPreferences;
 import com.example.android.popmovies.Utilities.ConnectedToInternet;
+import com.example.android.popmovies.ViewModels.FavoriteMovieViewModel;
 import com.example.android.popmovies.databinding.ActivityMainBinding;
 
 import java.util.ArrayList;
@@ -37,11 +41,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
     private static final String LOG_TAG = MainActivity.class.getName();
 
-    /**
-     * Constant value for the movie loader ID. We can choose any integer.
-     * This really only comes into play if you're using multiple loaders.
-     */
-    public static final int MOVIE_LOADER_ID = 1;
 
     /**
      * Adapter for the list of movies
@@ -49,6 +48,8 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     private MovieRecyclerViewAdapter mRecyclerAdapter;
 
     private boolean mDisplayFavorites;
+
+    private FavoriteMovieViewModel mFavoriteMovieViewModel;
 
     ActivityMainBinding mMainBinding;
 
@@ -59,7 +60,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         setContentView(R.layout.activity_main);
         mMainBinding = DataBindingUtil.setContentView(this, R.layout.activity_main);
 
-        mDisplayFavorites = getDisplayFavoritesFromPreferences(this);
+        mDisplayFavorites = CheckPreferences.getDisplayFavoritesFromPreferences(this);
 
         mMainBinding.empty.setVisibility(View.VISIBLE);
 
@@ -67,9 +68,11 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         GridLayoutManager mMovieRecyclerViewLayoutManager = new GridLayoutManager(this, mNoOfColumns, LinearLayoutManager.VERTICAL, false);
         mMainBinding.rvMoviePosterGrid.setLayoutManager(mMovieRecyclerViewLayoutManager);
         mMainBinding.rvMoviePosterGrid.setHasFixedSize(true);
-        mRecyclerAdapter = new MovieRecyclerViewAdapter(this, new ArrayList<MoviesModel>());
+        mRecyclerAdapter = new MovieRecyclerViewAdapter(this, new ArrayList<MoviesModel>(), new ArrayList<FavoriteMovieEntry>());
         mRecyclerAdapter.setClickListener(this);
         mMainBinding.rvMoviePosterGrid.setAdapter(mRecyclerAdapter);
+
+        mFavoriteMovieViewModel = ViewModelProviders.of(this).get(FavoriteMovieViewModel.class);
 
         if (ConnectedToInternet.isConnectedToInternet(this) && !mDisplayFavorites) {
             // Create a new adapter that takes an empty list of movies as input
@@ -89,6 +92,26 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     }
 
     private void updateUiFromFavorites() {
+        String sortOrder = CheckPreferences.getSortOrderFromPreferences(this);
+        if (sortOrder.equals(MovieUrlConstants.SORT_BY_DEFAULT)) {
+            mFavoriteMovieViewModel.getAllMoviesByPopularity().observe(this, new Observer<List<FavoriteMovieEntry>>() {
+                @Override
+                public void onChanged(@Nullable final List<FavoriteMovieEntry> movieEntries) {
+                    // Update the cached copy of the movies in the adapter.
+                    mRecyclerAdapter.setMovieData(null, movieEntries);
+                }
+            });
+        } else {
+            mFavoriteMovieViewModel.getAllMoviesByHighestRated().observe(this, new Observer<List<FavoriteMovieEntry>>() {
+                @Override
+                public void onChanged(@Nullable final List<FavoriteMovieEntry> movieEntries) {
+                    // Update the cached copy of the movies in the adapter.
+                    mRecyclerAdapter.setMovieData(null, movieEntries);
+                }
+            });
+        }
+
+
     }
 
     @Override
@@ -99,35 +122,12 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
     }
 
-    public static String getSortOrderFromPreferences(Context context) {
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
-
-        String keyForSortOrder = context.getString(R.string.sp_key_sort_order);
-        String defaultSortOrder = context.getString(R.string.array_value_most_popular);
-        String preferredSortOrder = sp.getString(keyForSortOrder, defaultSortOrder);
-
-        if (preferredSortOrder.equals(defaultSortOrder)) {
-            return MovieUrlConstants.SORT_BY_DEFAULT;
-        } else {
-            return MovieUrlConstants.SORT_BY_HIGHEST_RATED;
-        }
-    }
-
-    public static boolean getDisplayFavoritesFromPreferences(Context context) {
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
-
-        String keyForDisplayFavorites = context.getString(R.string.sp_key_show_favorites);
-        boolean defaultDisplayFavorites = context.getResources().getBoolean(R.bool.pref_show_favorite_default);
-
-        return sp.getBoolean(keyForDisplayFavorites, defaultDisplayFavorites);
-    }
 
     private void launchDetailActivity(MoviesModel currentMovie) {
         Intent intent = new Intent(this, DetailActivity.class);
         intent.putExtra(DetailActivity.CURRENT_MOVIE, currentMovie);
         startActivity(intent);
     }
-
 
 
     @Override
@@ -137,7 +137,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     }
 
     private void checkPreferences() {
-        mDisplayFavorites = getDisplayFavoritesFromPreferences(this);
+        mDisplayFavorites = CheckPreferences.getDisplayFavoritesFromPreferences(this);
 
         if (ConnectedToInternet.isConnectedToInternet(this) && !mDisplayFavorites) {
             // Create a new adapter that takes an empty list of movies as input
@@ -155,7 +155,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     }
 
 
-
     public void updateUiFromWeb() {
         // Clear the adapter of previous movie data
         mRecyclerAdapter.clear();
@@ -171,7 +170,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
     private void loadMoviesFromWeb() {
         try {
-            if (BuildConfig.API_KEY.isEmpty()) {
+            if (MovieUrlConstants.API_KEY.isEmpty()) {
                 Toast.makeText(getApplicationContext(), "API Key not found!!! Please obtain API Key from themoviedb.org", Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -180,12 +179,12 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
             Retrofit retrofit = ApiClient.getClient();
             ApiService apiService = retrofit.create(ApiService.class);
 
-            String sortPreference = getSortOrderFromPreferences(this);
-            Call<MoviesResponse> call = null;
+            String sortPreference = CheckPreferences.getSortOrderFromPreferences(this);
+            Call<MoviesResponse> call;
             if (sortPreference.equals(MovieUrlConstants.SORT_BY_DEFAULT)) {
-                call = apiService.getPopularMovies(BuildConfig.API_KEY);
+                call = apiService.getPopularMovies(MovieUrlConstants.API_KEY);
             } else {
-                call = apiService.getTopRatedMovies(BuildConfig.API_KEY);
+                call = apiService.getTopRatedMovies(MovieUrlConstants.API_KEY);
             }
 
             call.enqueue(new Callback<MoviesResponse>() {
@@ -201,7 +200,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                     // data set. This will trigger the RecyclerView Grid to update.
                     if (moviesModelList != null && !moviesModelList.isEmpty()) {
                         showMovieGridView();
-                        mRecyclerAdapter.setMovieData(moviesModelList);
+                        mRecyclerAdapter.setMovieData(moviesModelList, null);
                     }
 
 
@@ -219,7 +218,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
             Toast.makeText(this, e.toString(), Toast.LENGTH_SHORT).show();
         }
     }
-
 
 
     @Override
@@ -250,10 +248,26 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
     @Override
     public void onItemClick(int position) {
-        MoviesModel currentMovie = mRecyclerAdapter.getItem(position);
+        MoviesModel currentMovie = mRecyclerAdapter.getMoviesModelItem(position);
+        FavoriteMovieEntry currentFavoriteMovie = mRecyclerAdapter.getFavoriteMovieEntryItem(position);
         if (currentMovie != null) {
             launchDetailActivity(currentMovie);
+        } else if (currentFavoriteMovie != null) {
+            convertFavoriteAndLaunchDetailActivity(currentFavoriteMovie);
         }
+    }
+
+    private void convertFavoriteAndLaunchDetailActivity(FavoriteMovieEntry currentFavoriteMovie) {
+        MoviesModel currentMovie = new MoviesModel();
+        currentMovie.setId(Integer.parseInt(currentFavoriteMovie.getMovieId()));
+        currentMovie.setTitle(currentFavoriteMovie.getTitle());
+        currentMovie.setOriginalTitle(currentFavoriteMovie.getOriginalTitle());
+        currentMovie.setPosterPath(currentFavoriteMovie.getPosterPath());
+        currentMovie.setPopularity(Float.parseFloat(currentFavoriteMovie.getPopularity()));
+        currentMovie.setBackdropPath(currentFavoriteMovie.getBackdropPath());
+        currentMovie.setVoteAverage(Float.parseFloat(currentFavoriteMovie.getUserRating()));
+        currentMovie.setReleaseDate(currentFavoriteMovie.getReleaseDate());
+        launchDetailActivity(currentMovie);
     }
 
     private void showEmptyState() {

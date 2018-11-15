@@ -15,10 +15,10 @@ import java.util.List;
 @Dao
 public interface FavoriteMovieDao {
 
-    @Query("SELECT * FROM "+ MovieContract.MovieEntry.TABLE_NAME + " ORDER BY " + MovieContract.MovieEntry.COLUMN_POPULARITY)
+    @Query("SELECT * FROM "+ MovieContract.MovieEntry.TABLE_NAME + " ORDER BY " + MovieContract.MovieEntry.COLUMN_POPULARITY + " DESC")
     LiveData<List<FavoriteMovieEntry>> loadAllMoviesByPopularity();
 
-    @Query("SELECT * FROM " + MovieContract.MovieEntry.TABLE_NAME + " ORDER BY " + MovieContract.MovieEntry.COLUMN_USER_RATING)
+    @Query("SELECT * FROM " + MovieContract.MovieEntry.TABLE_NAME + " ORDER BY " + MovieContract.MovieEntry.COLUMN_USER_RATING + " DESC")
     LiveData<List<FavoriteMovieEntry>> loadAllMoviesByUserRating();
 
     @Insert
@@ -31,6 +31,6 @@ public interface FavoriteMovieDao {
     void deleteMovie(FavoriteMovieEntry favoriteMovieEntry);
 
     @Query("SELECT * FROM " + MovieContract.MovieEntry.TABLE_NAME + " WHERE "+ MovieContract.MovieEntry.COLUMN_MOVIE_ID +" = :id")
-    FavoriteMovieEntry loadMovieById(String id);
+    LiveData<FavoriteMovieEntry> loadMovieById(String id);
 }
 

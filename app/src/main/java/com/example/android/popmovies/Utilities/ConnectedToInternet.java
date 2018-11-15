@@ -12,9 +12,7 @@ public class ConnectedToInternet {
         assert cm != null;
         NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
 
-        boolean isConnected = activeNetwork != null &&
+        return activeNetwork != null &&
                 activeNetwork.isConnectedOrConnecting();
-
-        return isConnected;
     }
 }

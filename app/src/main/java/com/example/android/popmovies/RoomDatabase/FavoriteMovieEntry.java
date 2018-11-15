@@ -7,13 +7,11 @@ import android.support.annotation.NonNull;
 
 import com.example.android.popmovies.Data.MovieContract;
 
-import java.util.List;
-
 
 @Entity(tableName = MovieContract.MovieEntry.TABLE_NAME)
 public class FavoriteMovieEntry {
 
-    @PrimaryKey(autoGenerate = false)
+    @PrimaryKey
     @NonNull
     @ColumnInfo(name = MovieContract.MovieEntry.COLUMN_MOVIE_ID)
     private String movieId;
@@ -27,6 +25,9 @@ public class FavoriteMovieEntry {
     @ColumnInfo(name = MovieContract.MovieEntry.COLUMN_POPULARITY)
     private String popularity;
 
+    @ColumnInfo(name = MovieContract.MovieEntry.COLUMN_POSTER_PATH)
+    private String posterPath;
+
     @ColumnInfo(name = MovieContract.MovieEntry.COLUMN_POSTER, typeAffinity = ColumnInfo.BLOB)
     private byte[] poster;
 
@@ -39,38 +40,25 @@ public class FavoriteMovieEntry {
     @ColumnInfo(name = MovieContract.MovieEntry.COLUMN_RELEASE_DATE)
     private String releaseDate;
 
+    @ColumnInfo(name = MovieContract.MovieEntry.COLUMN_BACKDROP_PATH)
+    private String backdropPath;
+
     @ColumnInfo(name = MovieContract.MovieEntry.COLUMN_BACKDROP, typeAffinity = ColumnInfo.BLOB)
     private byte[] backdrop;
 
-    @ColumnInfo(name = MovieContract.MovieEntry.COLUMN_TRAILER_IDS)
-    private List<String> trailerIds;
 
-    @ColumnInfo(name = MovieContract.MovieEntry.COLUMN_REVIEW_AUTHORS)
-    private List<String> reviewAuthors;
-
-    @ColumnInfo(name = MovieContract.MovieEntry.COLUMN_REVIEW_CONTENTS)
-    private List<String> reviewContents;
-
-    @ColumnInfo(name = MovieContract.MovieEntry.COLUMN_REVIEW_URLS)
-    private List<String> reviewUrls;
-
-
-
-    public FavoriteMovieEntry(String movieId, String title, String originalTitle, String popularity, byte[] poster, String synopsis, String userRating, String releaseDate, byte[] backdrop,
-                              List<String> trailerIds, List<String> reviewAuthors, List<String> reviewContents, List<String> reviewUrls) {
+    public FavoriteMovieEntry(@NonNull String movieId, String title, String originalTitle, String popularity, String posterPath, byte[] poster, String synopsis, String userRating, String releaseDate, String backdropPath, byte[] backdrop) {
         this.movieId = movieId;
         this.title = title;
         this.originalTitle = originalTitle;
         this.popularity = popularity;
+        this.posterPath = posterPath;
         this.poster = poster;
         this.synopsis = synopsis;
         this.userRating = userRating;
         this.releaseDate = releaseDate;
+        this.backdropPath = backdropPath;
         this.backdrop = backdrop;
-        this.trailerIds = trailerIds;
-        this.reviewAuthors = reviewAuthors;
-        this.reviewContents = reviewContents;
-        this.reviewUrls = reviewUrls;
     }
 
     @NonNull
@@ -106,6 +94,14 @@ public class FavoriteMovieEntry {
         this.popularity = popularity;
     }
 
+    public String getPosterPath() {
+        return this.posterPath;
+    }
+
+    public void setPosterPath(String posterPath) {
+        this.posterPath = posterPath;
+    }
+
     public byte[] getPoster() {
         return this.poster;
     }
@@ -138,44 +134,20 @@ public class FavoriteMovieEntry {
         this.releaseDate = releaseDate;
     }
 
+    public String getBackdropPath() {
+        return this.backdropPath;
+    }
+
+    public void setBackdropPath(String backdropPath) {
+        this.backdropPath = backdropPath;
+    }
+
     public byte[] getBackdrop() {
         return this.backdrop;
     }
 
     public void setBackdrop(byte[] backdrop) {
         this.backdrop = backdrop;
-    }
-
-    public List<String> getTrailerIds() {
-        return this.trailerIds;
-    }
-
-    public void setTrailerIds(List<String> trailerIds) {
-        this.trailerIds = trailerIds;
-    }
-
-    public List<String> getReviewAuthors() {
-        return this.reviewAuthors;
-    }
-
-    public void setReviewAuthors(List<String> reviewAuthors) {
-        this.reviewAuthors = reviewAuthors;
-    }
-
-    public List<String> getReviewContents() {
-        return this.reviewContents;
-    }
-
-    public void setReviewContents(List<String> reviewContents) {
-        this.reviewContents = reviewContents;
-    }
-
-    public List<String> getReviewUrls() {
-        return this.reviewUrls;
-    }
-
-    public void setReviewUrls(List<String> reviewUrls) {
-        this.reviewUrls = reviewUrls;
     }
 
 }

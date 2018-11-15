@@ -15,7 +15,6 @@
  */
 package com.example.android.popmovies;
 
-import android.app.Activity;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v7.preference.CheckBoxPreference;
@@ -80,7 +79,6 @@ public class SettingsFragment extends PreferenceFragmentCompat implements
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-        Activity activity = getActivity();
 
        /* if (key.equals(getString(R.string.sp_key_show_favorites))) {
             // TODO update UI to show favorites or web results based on value

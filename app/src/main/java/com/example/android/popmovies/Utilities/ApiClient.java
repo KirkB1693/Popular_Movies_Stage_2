@@ -7,7 +7,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiClient {
 
-    public static final String BASE_URL = MovieUrlConstants.BASE_SEARCH_URL;
+    private static final String BASE_URL = MovieUrlConstants.BASE_SEARCH_URL;
     public static Retrofit retrofit = null;
 
 

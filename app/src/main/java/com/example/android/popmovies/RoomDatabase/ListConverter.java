@@ -16,8 +16,7 @@ public class ListConverter {
         }
         Gson gson = new Gson();
         Type listType = new TypeToken<List<String>>() {}.getType();
-        String json = gson.toJson(list, listType);
-        return json;
+        return gson.toJson(list, listType);
     }
 
     @TypeConverter

@@ -1,16 +1,25 @@
 package com.example.android.popmovies;
 
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.databinding.DataBindingUtil;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.util.Log;
 import android.view.View;
+import android.widget.CheckBox;
 import android.widget.Toast;
 
 import com.example.android.popmovies.Adapters.ReviewRecyclerViewAdapter;
@@ -21,13 +30,21 @@ import com.example.android.popmovies.JsonResponseModels.ReviewsModel;
 import com.example.android.popmovies.JsonResponseModels.ReviewsResponse;
 import com.example.android.popmovies.JsonResponseModels.VideosModel;
 import com.example.android.popmovies.JsonResponseModels.VideosResponse;
+import com.example.android.popmovies.RoomDatabase.FavoriteMovieEntry;
+import com.example.android.popmovies.RoomDatabase.FavoriteMovieRoomDatabase;
 import com.example.android.popmovies.Utilities.ApiClient;
 import com.example.android.popmovies.Utilities.ApiService;
 import com.example.android.popmovies.Utilities.CalcNumOfColumns;
+import com.example.android.popmovies.Utilities.CheckPreferences;
 import com.example.android.popmovies.Utilities.ConnectedToInternet;
+import com.example.android.popmovies.ViewModels.FavoriteMovieViewModel;
+import com.example.android.popmovies.ViewModels.SingleMovieViewModel;
+import com.example.android.popmovies.ViewModels.SingleMovieViewModelFactory;
 import com.example.android.popmovies.databinding.ActivityDetailBinding;
 import com.squareup.picasso.Picasso;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.List;
 
 import retrofit2.Call;
@@ -49,7 +66,13 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
 
     private List<ReviewsModel> mReviewsModel;
 
-    ActivityDetailBinding mDetailBinding;
+    private FavoriteMovieRoomDatabase mDb;
+
+    private FavoriteMovieEntry mMovieEntry;
+
+    private MoviesModel mCurrentMovie;
+
+    private ActivityDetailBinding mDetailBinding;
 
 
     @Override
@@ -69,35 +92,88 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
         if (intent == null) {
             closeOnError();
         } else {
-            MoviesModel currentMovie = intent.getParcelableExtra(CURRENT_MOVIE);
+            mCurrentMovie = intent.getParcelableExtra(CURRENT_MOVIE);
+            boolean favorite = checkSharedPreferencesForFavoriteStatus();
+            if (favorite) {
+                populateUiFromFavorite(mCurrentMovie);
 
-            mDetailBinding.primaryMovieDetails.tvOriginalTitle.setText(currentMovie.getOriginalTitle());
-            mDetailBinding.primaryMovieDetails.tvPlotSynopsis.setText(currentMovie.getOverview());
-
-            mDetailBinding.primaryMovieDetails.tvUserRating.setText(formatUserRatings(Float.toString(currentMovie.getVoteAverage())));
-            mDetailBinding.primaryMovieDetails.tvReleaseDate.setText(getReleaseDateYear(currentMovie.getReleaseDate()));
-
-            String fullPosterPath = MovieUrlConstants.BASE_POSTER_URL + MovieUrlConstants.DEFAULT_POSTER_SIZE + currentMovie.getPosterPath();
-            Picasso.with(this).load(fullPosterPath).into(mDetailBinding.primaryMovieDetails.ivMoviePosterDetail);
-
-            String fullBackdropPath = MovieUrlConstants.BASE_POSTER_URL + MovieUrlConstants.DEFAULT_BACKDROP_SIZE + currentMovie.getBackdropPath();
-            Picasso.with(this).load(fullBackdropPath).into(mDetailBinding.ivMovieBackgroundDetail);
-
-            if (currentMovie.getTitle() != null) {
-                setTitle(currentMovie.getTitle());
             } else {
-                setTitle(R.string.app_name);
-            }
-
-            if (ConnectedToInternet.isConnectedToInternet(this)) {
-                loadTrailersFromWeb(currentMovie.getId());
-                loadReviewsFromWeb(currentMovie.getId());
+                populateUiFromIntent(mCurrentMovie);
             }
 
 
+        }
+    }
+
+    private void populateUiFromFavorite(MoviesModel currentMovie) {
+        mDb = FavoriteMovieRoomDatabase.getInstance(getApplicationContext());
+        SingleMovieViewModelFactory factory = new SingleMovieViewModelFactory(mDb, Integer.toString(currentMovie.getId()));
+        final SingleMovieViewModel viewModel
+                = ViewModelProviders.of(this, factory).get(SingleMovieViewModel.class);
+        viewModel.getFavoriteMovieEntryLiveData().observe(this, new Observer<FavoriteMovieEntry>() {
+            @Override
+            public void onChanged(@Nullable FavoriteMovieEntry movieEntry) {
+                viewModel.getFavoriteMovieEntryLiveData().removeObserver(this);
+                mMovieEntry = movieEntry;
+                if (movieEntry != null) {
+                    mDetailBinding.primaryMovieDetails.ivMoviePosterDetail.setImageBitmap(BitmapFactory.decodeByteArray(mMovieEntry.getPoster(), 0, mMovieEntry.getPoster().length));
+                    mDetailBinding.ivMovieBackgroundDetail.setImageBitmap(BitmapFactory.decodeByteArray(mMovieEntry.getBackdrop(), 0, mMovieEntry.getBackdrop().length));
+                }
+            }
+        });
+
+
+        mDetailBinding.primaryMovieDetails.tvOriginalTitle.setText(currentMovie.getOriginalTitle());
+        mDetailBinding.primaryMovieDetails.tvPlotSynopsis.setText(currentMovie.getOverview());
+
+        mDetailBinding.primaryMovieDetails.tvUserRating.setText(formatUserRatings(Float.toString(currentMovie.getVoteAverage())));
+        mDetailBinding.primaryMovieDetails.tvReleaseDate.setText(getReleaseDateYear(currentMovie.getReleaseDate()));
+
+
+        if (currentMovie.getTitle() != null) {
+            setTitle(currentMovie.getTitle());
+        } else {
+            setTitle(R.string.app_name);
+        }
+
+
+        if (ConnectedToInternet.isConnectedToInternet(this)) {
+            loadTrailersFromWeb(currentMovie.getId());
+            loadReviewsFromWeb(currentMovie.getId());
+        } else {
             mDetailBinding.movieTrailers.emptyTrailers.setVisibility(View.VISIBLE);
+            mDetailBinding.movieTrailers.emptyTrailers.setText(getString(R.string.no_internet));
+        }
 
 
+    }
+
+    private void populateUiFromIntent(MoviesModel currentMovie) {
+        mDetailBinding.primaryMovieDetails.tvOriginalTitle.setText(currentMovie.getOriginalTitle());
+        mDetailBinding.primaryMovieDetails.tvPlotSynopsis.setText(currentMovie.getOverview());
+
+        mDetailBinding.primaryMovieDetails.tvUserRating.setText(formatUserRatings(Float.toString(currentMovie.getVoteAverage())));
+        mDetailBinding.primaryMovieDetails.tvReleaseDate.setText(getReleaseDateYear(currentMovie.getReleaseDate()));
+
+        String fullPosterPath = MovieUrlConstants.BASE_POSTER_URL + MovieUrlConstants.DEFAULT_POSTER_SIZE + currentMovie.getPosterPath();
+        Picasso.with(this).load(fullPosterPath).into(mDetailBinding.primaryMovieDetails.ivMoviePosterDetail);
+
+        String fullBackdropPath = MovieUrlConstants.BASE_POSTER_URL + MovieUrlConstants.DEFAULT_BACKDROP_SIZE + currentMovie.getBackdropPath();
+        Picasso.with(this).load(fullBackdropPath).into(mDetailBinding.ivMovieBackgroundDetail);
+
+        if (currentMovie.getTitle() != null) {
+            setTitle(currentMovie.getTitle());
+        } else {
+            setTitle(R.string.app_name);
+        }
+
+
+        if (ConnectedToInternet.isConnectedToInternet(this)) {
+            loadTrailersFromWeb(currentMovie.getId());
+            loadReviewsFromWeb(currentMovie.getId());
+        } else {
+            mDetailBinding.movieTrailers.emptyTrailers.setVisibility(View.VISIBLE);
+            mDetailBinding.movieTrailers.emptyTrailers.setText(getString(R.string.no_internet));
         }
     }
 
@@ -147,15 +223,10 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
 
     private void loadTrailersFromWeb(int currentMovieId) {
         try {
-            if (BuildConfig.API_KEY.isEmpty()) {
-                Toast.makeText(getApplicationContext(), "API Key not found!!! Please obtain API Key from themoviedb.org", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
             Retrofit retrofit = ApiClient.getClient();
             ApiService apiService = retrofit.create(ApiService.class);
 
-            Call<VideosResponse> call = apiService.getMovieTrailer(currentMovieId, BuildConfig.API_KEY);
+            Call<VideosResponse> call = apiService.getMovieTrailer(currentMovieId, MovieUrlConstants.API_KEY);
 
             call.enqueue(new Callback<VideosResponse>() {
                 @Override
@@ -180,15 +251,10 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
 
     private void loadReviewsFromWeb(int currentMovieId) {
         try {
-            if (BuildConfig.API_KEY.isEmpty()) {
-                Toast.makeText(getApplicationContext(), "API Key not found!!! Please obtain API Key from themoviedb.org", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
             Retrofit retrofit = ApiClient.getClient();
             ApiService apiService = retrofit.create(ApiService.class);
 
-            Call<ReviewsResponse> call = apiService.getReviews(currentMovieId, BuildConfig.API_KEY);
+            Call<ReviewsResponse> call = apiService.getReviews(currentMovieId, MovieUrlConstants.API_KEY);
 
             call.enqueue(new Callback<ReviewsResponse>() {
                 @Override
@@ -210,16 +276,75 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
         }
     }
 
+    public void onFavoriteCheckboxClicked(View view) {
+        // Is the view now checked?
+        boolean checked = ((CheckBox) view).isChecked();
+        FavoriteMovieViewModel favoriteMovieViewModel = new FavoriteMovieViewModel(getApplication());
+        // if checked, add movie to favorite movies db and update preferences to show favorites
+        if (checked) {
+            if (mMovieEntry == null) {
+                Bitmap posterBitmap = ((BitmapDrawable) mDetailBinding.primaryMovieDetails.ivMoviePosterDetail.getDrawable()).getBitmap();
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                posterBitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+                byte[] posterInBytes = baos.toByteArray();
+                try {
+                    baos.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                Bitmap backdropBitmap = ((BitmapDrawable) mDetailBinding.ivMovieBackgroundDetail.getDrawable()).getBitmap();
+                ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
+                backdropBitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+                byte[] backdropInBytes = baos2.toByteArray();
+                try {
+                    baos.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                mMovieEntry = new FavoriteMovieEntry(Integer.toString(mCurrentMovie.getId()), mCurrentMovie.getTitle(), mCurrentMovie.getOriginalTitle(),
+                        Float.toString(mCurrentMovie.getPopularity()),
+                        mCurrentMovie.getPosterPath(), posterInBytes,
+                        mCurrentMovie.getOverview(),
+                        Float.toString(mCurrentMovie.getVoteAverage()),
+                        mCurrentMovie.getReleaseDate(),
+                        mCurrentMovie.getBackdropPath(),
+                        backdropInBytes);
+            }
+
+            favoriteMovieViewModel.insertMovie(mMovieEntry);
+            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putBoolean(getString(R.string.sp_key_show_favorites), getResources().getBoolean(R.bool.checked_show_favorites));
+            editor.commit();
+            Toast.makeText(this, mDetailBinding.primaryMovieDetails.tvOriginalTitle.getText() + " added to Favorites", Toast.LENGTH_SHORT).show();
+        } else {
+            // if unchecked, deleted movie from favorite movies db and update preferences to show all movies
+            favoriteMovieViewModel.deleteMovie(mMovieEntry);
+            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putBoolean(getString(R.string.sp_key_show_favorites), getResources().getBoolean(R.bool.unchecked_show_favorites));
+            editor.commit();
+            Toast.makeText(this, mDetailBinding.primaryMovieDetails.tvOriginalTitle.getText() + " removed from Favorites", Toast.LENGTH_SHORT).show();
+        }
+
+    }
+
+    private boolean checkSharedPreferencesForFavoriteStatus() {
+        // check if item is a favorite (shared preference is favorite) and set the checkbox status appropriately
+        boolean favorite = CheckPreferences.getDisplayFavoritesFromPreferences(this);
+        mDetailBinding.primaryMovieDetails.checkBoxFavoriteMovie.setChecked(favorite);
+        return favorite;
+    }
 
     @Override
     public void onReviewItemClick(int position) {
         String currentReviewUrl = mReviewRecyclerAdapter.getItem(position);
         if (currentReviewUrl != null) {
-            launchWebsite(this, currentReviewUrl);
+            launchWebsite(currentReviewUrl);
         }
     }
 
-    private void launchWebsite(DetailActivity detailActivity, String currentReviewUrl) {
+    private void launchWebsite(String currentReviewUrl) {
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setData(Uri.parse(currentReviewUrl));
         startActivity(intent);
@@ -261,7 +386,7 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
     }
 
     private String getReleaseDateYear(String releaseDate) {
-        String[] date = releaseDate.split(getString(R.string.date_seperator_string));
+        String[] date = releaseDate.split(getString(R.string.date_separator_string));
         return date[0];
     }
 

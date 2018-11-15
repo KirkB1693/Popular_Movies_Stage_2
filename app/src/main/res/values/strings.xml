@@ -9,12 +9,12 @@
     <string name="action_highest_rated">Highest Rated</string>
     <string name="no_internet">No internet connection</string>
     <string name="close_on_error">Something went wrong…</string>
-    <string name="error_no_movies_found">Something went wrong...  No movies found!</string>
+    <string name="error_no_movies_found">Something went wrong…  No movies found!</string>
     <string name="button_description_mark_as_favorite">Mark as Favorite</string>
     <string name="end_format_for_rating">/10</string>
     <string name="trailers_label">Trailers</string>
     <string name="movie_trailer_content_description">Movie Trailer</string>
-    <string name="date_seperator_string">-</string>
+    <string name="date_separator_string">-</string>
     <string name="sp_key_sort_order">sort_order</string>
     <string name="pref_sort_order_label">Sort Order</string>
     <string name="sp_key_show_favorites">show_favorites</string>
@@ -28,6 +28,6 @@
     <string name="pref_enable_notifications_false">Not Enabled</string>
     <string name="pref_enable_notifications_true">Enabled</string>
     <string name="pref_enable_notifications_label">Movie Notifications</string>
-    <string name="content_authority">com.example.android.popmovies</string>
-    <string name="error_no_trailers_found">Something went wrong...  No trailers found!</string>
+    <string name="error_no_trailers_found">Something went wrong…  No trailers found!</string>
+    <string name="reviews_label">Reviews</string>
 </resources>

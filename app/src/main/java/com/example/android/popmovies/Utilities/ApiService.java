@@ -12,7 +12,7 @@ import retrofit2.http.Query;
 
 public interface ApiService {
 
-    @GET(MovieUrlConstants.SORT_BY_DEFAULT)
+    @GET(MovieUrlConstants.SORT_BY_MOST_POPULAR_DEFAULT)
     Call<MoviesResponse> getPopularMovies(@Query("api_key") String apiKey);
 
     @GET(MovieUrlConstants.SORT_BY_HIGHEST_RATED)

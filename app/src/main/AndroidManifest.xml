@@ -24,7 +24,6 @@
 
         <activity
             android:name=".DetailActivity"
-            android:label="Movie Details"
             android:parentActivityName=".MainActivity">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -34,7 +33,6 @@
 
         <activity android:name=".SettingsActivity"/>
 
-        <!-- Our ContentProvider -->
 
     </application>
 

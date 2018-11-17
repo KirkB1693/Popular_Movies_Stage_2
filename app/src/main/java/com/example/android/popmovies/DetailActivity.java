@@ -38,8 +38,6 @@ import com.example.android.popmovies.Utilities.CalcNumOfColumns;
 import com.example.android.popmovies.Utilities.CheckPreferences;
 import com.example.android.popmovies.Utilities.ConnectedToInternet;
 import com.example.android.popmovies.ViewModels.FavoriteMovieViewModel;
-import com.example.android.popmovies.ViewModels.SingleMovieViewModel;
-import com.example.android.popmovies.ViewModels.SingleMovieViewModelFactory;
 import com.example.android.popmovies.databinding.ActivityDetailBinding;
 import com.squareup.picasso.Picasso;
 
@@ -72,6 +70,8 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
 
     private MoviesModel mCurrentMovie;
 
+    private FavoriteMovieViewModel mFavoriteMovieViewModel;
+
     private ActivityDetailBinding mDetailBinding;
 
 
@@ -80,6 +80,7 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
         mDetailBinding = DataBindingUtil.setContentView(this, R.layout.activity_detail);
+        mFavoriteMovieViewModel = new FavoriteMovieViewModel(getApplication());
 
         setupUI();
     }
@@ -107,21 +108,9 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
 
     private void populateUiFromFavorite(MoviesModel currentMovie) {
         mDb = FavoriteMovieRoomDatabase.getInstance(getApplicationContext());
-        SingleMovieViewModelFactory factory = new SingleMovieViewModelFactory(mDb, Integer.toString(currentMovie.getId()));
-        final SingleMovieViewModel viewModel
-                = ViewModelProviders.of(this, factory).get(SingleMovieViewModel.class);
-        viewModel.getFavoriteMovieEntryLiveData().observe(this, new Observer<FavoriteMovieEntry>() {
-            @Override
-            public void onChanged(@Nullable FavoriteMovieEntry movieEntry) {
-                viewModel.getFavoriteMovieEntryLiveData().removeObserver(this);
-                mMovieEntry = movieEntry;
-                if (movieEntry != null) {
-                    mDetailBinding.primaryMovieDetails.ivMoviePosterDetail.setImageBitmap(BitmapFactory.decodeByteArray(mMovieEntry.getPoster(), 0, mMovieEntry.getPoster().length));
-                    mDetailBinding.ivMovieBackgroundDetail.setImageBitmap(BitmapFactory.decodeByteArray(mMovieEntry.getBackdrop(), 0, mMovieEntry.getBackdrop().length));
-                }
-            }
-        });
-
+        mFavoriteMovieViewModel = ViewModelProviders.of(this).get(FavoriteMovieViewModel.class);
+        observerForFavoritesSetup();
+        mFavoriteMovieViewModel.findMovie(Integer.toString(currentMovie.getId()));
 
         mDetailBinding.primaryMovieDetails.tvOriginalTitle.setText(currentMovie.getOriginalTitle());
         mDetailBinding.primaryMovieDetails.tvPlotSynopsis.setText(currentMovie.getOverview());
@@ -146,6 +135,23 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
         }
 
 
+    }
+
+    private void observerForFavoritesSetup() {mFavoriteMovieViewModel.getSearchResults().observe(this,
+                new Observer<List<FavoriteMovieEntry>>() {
+                    @Override
+                    public void onChanged(@Nullable final List<FavoriteMovieEntry> favoriteMovieEntries) {
+                        if (favoriteMovieEntries != null) {
+                            if (favoriteMovieEntries.size() > 0) {
+                                mMovieEntry = favoriteMovieEntries.get(0);
+                                mDetailBinding.primaryMovieDetails.ivMoviePosterDetail.setImageBitmap(BitmapFactory.decodeByteArray(mMovieEntry.getPoster(), 0, mMovieEntry.getPoster().length));
+                                mDetailBinding.ivMovieBackgroundDetail.setImageBitmap(BitmapFactory.decodeByteArray(mMovieEntry.getBackdrop(), 0, mMovieEntry.getBackdrop().length));
+                            }
+                        } else {
+                            Toast.makeText(getApplicationContext(),"No Match to MovieId in Search Results", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
     }
 
     private void populateUiFromIntent(MoviesModel currentMovie) {
@@ -279,7 +285,6 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
     public void onFavoriteCheckboxClicked(View view) {
         // Is the view now checked?
         boolean checked = ((CheckBox) view).isChecked();
-        FavoriteMovieViewModel favoriteMovieViewModel = new FavoriteMovieViewModel(getApplication());
         // if checked, add movie to favorite movies db and update preferences to show favorites
         if (checked) {
             if (mMovieEntry == null) {
@@ -294,10 +299,10 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
                 }
                 Bitmap backdropBitmap = ((BitmapDrawable) mDetailBinding.ivMovieBackgroundDetail.getDrawable()).getBitmap();
                 ByteArrayOutputStream baos2 = new ByteArrayOutputStream();
-                backdropBitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+                backdropBitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos2);
                 byte[] backdropInBytes = baos2.toByteArray();
                 try {
-                    baos.close();
+                    baos2.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -311,7 +316,7 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
                         backdropInBytes);
             }
 
-            favoriteMovieViewModel.insertMovie(mMovieEntry);
+            mFavoriteMovieViewModel.insertMovie(mMovieEntry);
             SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
             SharedPreferences.Editor editor = preferences.edit();
             editor.putBoolean(getString(R.string.sp_key_show_favorites), getResources().getBoolean(R.bool.checked_show_favorites));
@@ -319,7 +324,7 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
             Toast.makeText(this, mDetailBinding.primaryMovieDetails.tvOriginalTitle.getText() + " added to Favorites", Toast.LENGTH_SHORT).show();
         } else {
             // if unchecked, deleted movie from favorite movies db and update preferences to show all movies
-            favoriteMovieViewModel.deleteMovie(mMovieEntry);
+            mFavoriteMovieViewModel.deleteMovie(mMovieEntry.getMovieId());
             SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
             SharedPreferences.Editor editor = preferences.edit();
             editor.putBoolean(getString(R.string.sp_key_show_favorites), getResources().getBoolean(R.bool.unchecked_show_favorites));

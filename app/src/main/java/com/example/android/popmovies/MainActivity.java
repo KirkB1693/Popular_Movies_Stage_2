@@ -10,12 +10,14 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+import com.example.android.popmovies.Adapters.FavoriteMovieRecyclerAdapter;
 import com.example.android.popmovies.Adapters.MovieRecyclerViewAdapter;
 import com.example.android.popmovies.Data.MovieUrlConstants;
 import com.example.android.popmovies.JsonResponseModels.MoviesModel;
@@ -37,19 +39,23 @@ import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 
-public class MainActivity extends AppCompatActivity implements SharedPreferences.OnSharedPreferenceChangeListener, MovieRecyclerViewAdapter.ItemClickListener {
+public class MainActivity extends AppCompatActivity implements SharedPreferences.OnSharedPreferenceChangeListener, MovieRecyclerViewAdapter.WebItemClickListener, FavoriteMovieRecyclerAdapter.FavoriteItemClickListener {
 
     private static final String LOG_TAG = MainActivity.class.getName();
 
-
+    private RecyclerView mRecyclerView;
     /**
      * Adapter for the list of movies
      */
-    private MovieRecyclerViewAdapter mRecyclerAdapter;
+    private MovieRecyclerViewAdapter mWebMoviesRecyclerAdapter;
+
+    private FavoriteMovieRecyclerAdapter mFavoriteMovieRecyclerAdapter;
 
     private boolean mDisplayFavorites;
 
     private FavoriteMovieViewModel mFavoriteMovieViewModel;
+
+    private String mSortOrder;
 
     ActivityMainBinding mMainBinding;
 
@@ -59,59 +65,99 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mMainBinding = DataBindingUtil.setContentView(this, R.layout.activity_main);
+        mRecyclerView = mMainBinding.rvMoviePosterGrid;
 
         mDisplayFavorites = CheckPreferences.getDisplayFavoritesFromPreferences(this);
-
+        mSortOrder = CheckPreferences.getSortOrderFromPreferences(this);
+        mFavoriteMovieViewModel = ViewModelProviders.of(this).get(FavoriteMovieViewModel.class);
         mMainBinding.empty.setVisibility(View.VISIBLE);
 
+        mFavoriteMovieRecyclerAdapter = new FavoriteMovieRecyclerAdapter(this, new ArrayList<FavoriteMovieEntry>());
+
+        mWebMoviesRecyclerAdapter = new MovieRecyclerViewAdapter(this, new ArrayList<MoviesModel>());
+
+
         int mNoOfColumns = CalcNumOfColumns.calculateNoOfColumns(getApplicationContext());
-        GridLayoutManager mMovieRecyclerViewLayoutManager = new GridLayoutManager(this, mNoOfColumns, LinearLayoutManager.VERTICAL, false);
-        mMainBinding.rvMoviePosterGrid.setLayoutManager(mMovieRecyclerViewLayoutManager);
-        mMainBinding.rvMoviePosterGrid.setHasFixedSize(true);
-        mRecyclerAdapter = new MovieRecyclerViewAdapter(this, new ArrayList<MoviesModel>(), new ArrayList<FavoriteMovieEntry>());
-        mRecyclerAdapter.setClickListener(this);
-        mMainBinding.rvMoviePosterGrid.setAdapter(mRecyclerAdapter);
+        GridLayoutManager layoutManager = new GridLayoutManager(this, mNoOfColumns, LinearLayoutManager.VERTICAL, false);
+        mRecyclerView.setLayoutManager(layoutManager);
+        mRecyclerView.setHasFixedSize(true);
+        if (mRecyclerView.getAdapter() == null) {
+            if (ConnectedToInternet.isConnectedToInternet(this) && !mDisplayFavorites) {
+                // Load Movies from Web
+                updateUiFromWeb();
 
-        mFavoriteMovieViewModel = ViewModelProviders.of(this).get(FavoriteMovieViewModel.class);
+            } else if (mDisplayFavorites) {
+                // Load Movies from Favorites - we can do this even if not connected to internet
+                updateUiFromFavorites();
+            } else {
+                // Set progress bar and recycler view visibility to gone
+                showEmptyState();
+                // Set empty state text to display "No internet connection."
+                mMainBinding.empty.setText(R.string.no_internet);
 
-        if (ConnectedToInternet.isConnectedToInternet(this) && !mDisplayFavorites) {
-            // Create a new adapter that takes an empty list of movies as input
-            updateUiFromWeb();
-
-        } else if (mDisplayFavorites) {
-            updateUiFromFavorites();
-        } else {
-            // Set progress bar and recycler view visibility to gone
-            showEmptyState();
-            // Set empty state text to display "No internet connection."
-            mMainBinding.empty.setText(R.string.no_internet);
-
+            }
         }
+
 
 
     }
 
-    private void updateUiFromFavorites() {
-        String sortOrder = CheckPreferences.getSortOrderFromPreferences(this);
-        if (sortOrder.equals(MovieUrlConstants.SORT_BY_DEFAULT)) {
+
+    private void setRecyclerAdapter(RecyclerView.Adapter adapter) {
+        mRecyclerView.setAdapter(adapter);
+        checkEmptyDisplay();
+    }
+
+    private void checkEmptyDisplay() {
+        if (mRecyclerView.getAdapter() != null && mRecyclerView.getAdapter().getItemCount() > 0) {
+            showMovieGridView();
+        } else {
+            showEmptyState();
+        }
+    }
+
+    private void observerForFavoritesSetup() {
+        mSortOrder = CheckPreferences.getSortOrderFromPreferences(this);
+        if (mSortOrder.equals(MovieUrlConstants.SORT_BY_MOST_POPULAR_DEFAULT)) {
             mFavoriteMovieViewModel.getAllMoviesByPopularity().observe(this, new Observer<List<FavoriteMovieEntry>>() {
                 @Override
-                public void onChanged(@Nullable final List<FavoriteMovieEntry> movieEntries) {
-                    // Update the cached copy of the movies in the adapter.
-                    mRecyclerAdapter.setMovieData(null, movieEntries);
+                public void onChanged(@Nullable final List<FavoriteMovieEntry> favoriteMovieEntries) {
+                    showMovieGridView();
+                    mFavoriteMovieRecyclerAdapter.setMovieData(favoriteMovieEntries);
                 }
             });
         } else {
             mFavoriteMovieViewModel.getAllMoviesByHighestRated().observe(this, new Observer<List<FavoriteMovieEntry>>() {
                 @Override
-                public void onChanged(@Nullable final List<FavoriteMovieEntry> movieEntries) {
-                    // Update the cached copy of the movies in the adapter.
-                    mRecyclerAdapter.setMovieData(null, movieEntries);
+                public void onChanged(@Nullable List<FavoriteMovieEntry> favoriteMovieEntries) {
+                    showMovieGridView();
+                    mFavoriteMovieRecyclerAdapter.setMovieData(favoriteMovieEntries);
                 }
             });
         }
+       /*
+       *TODO Move this code to Detail Activity, search results are the results of a search such as findMovie(id)
+       *
+       * mFavoriteMovieViewModel.getSearchResults().observe(this,
+                new Observer<List<FavoriteMovieEntry>>() {
+                    @Override
+                    public void onChanged(@Nullable final List<FavoriteMovieEntry> favoriteMovieEntries) {
+
+                        if (favoriteMovieEntries.size() > 0) {
+                            // TODO if at least 1 movie matches the search results get data from first result
+                        } else {
+                            // TODO let user know that Movie Id was not found in search results
+                        }
+                    }
+                });*/
+    }
 
 
+    private void updateUiFromFavorites() {
+        showProgressBar();
+        mFavoriteMovieRecyclerAdapter.setClickListener(this);
+        setRecyclerAdapter(mFavoriteMovieRecyclerAdapter);
+        observerForFavoritesSetup();
     }
 
     @Override
@@ -124,9 +170,9 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
 
     private void launchDetailActivity(MoviesModel currentMovie) {
-        Intent intent = new Intent(this, DetailActivity.class);
+        Intent intent = new Intent(getApplicationContext(), DetailActivity.class);
         intent.putExtra(DetailActivity.CURRENT_MOVIE, currentMovie);
-        startActivity(intent);
+        this.startActivity(intent);
     }
 
 
@@ -156,15 +202,11 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
 
     public void updateUiFromWeb() {
-        // Clear the adapter of previous movie data
-        mRecyclerAdapter.clear();
-        // Set progress bar view visibility to gone
-        mMainBinding.progress.setVisibility(View.GONE);
+        // Clear the previous adapter
+        setRecyclerAdapter(null);
 
         loadMoviesFromWeb();
-
-        Log.i(LOG_TAG, "TEST: onLoadFinished() executed");
-
+        Log.i(LOG_TAG, "TEST: loadMoviesFromWeb() executed");
 
     }
 
@@ -175,13 +217,17 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                 return;
             }
 
+
             showProgressBar();
+
+            mWebMoviesRecyclerAdapter.setClickListener(this);
+            setRecyclerAdapter(mWebMoviesRecyclerAdapter);
             Retrofit retrofit = ApiClient.getClient();
             ApiService apiService = retrofit.create(ApiService.class);
 
             String sortPreference = CheckPreferences.getSortOrderFromPreferences(this);
             Call<MoviesResponse> call;
-            if (sortPreference.equals(MovieUrlConstants.SORT_BY_DEFAULT)) {
+            if (sortPreference.equals(MovieUrlConstants.SORT_BY_MOST_POPULAR_DEFAULT)) {
                 call = apiService.getPopularMovies(MovieUrlConstants.API_KEY);
             } else {
                 call = apiService.getTopRatedMovies(MovieUrlConstants.API_KEY);
@@ -200,7 +246,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                     // data set. This will trigger the RecyclerView Grid to update.
                     if (moviesModelList != null && !moviesModelList.isEmpty()) {
                         showMovieGridView();
-                        mRecyclerAdapter.setMovieData(moviesModelList, null);
+                        mWebMoviesRecyclerAdapter.setMovieData(moviesModelList);
                     }
 
 
@@ -245,16 +291,17 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    public void onWebItemClick(int position) {
+        MoviesModel currentMovie = mWebMoviesRecyclerAdapter.getMoviesModelItem(position);
+        launchDetailActivity(currentMovie);
+    }
 
     @Override
-    public void onItemClick(int position) {
-        MoviesModel currentMovie = mRecyclerAdapter.getMoviesModelItem(position);
-        FavoriteMovieEntry currentFavoriteMovie = mRecyclerAdapter.getFavoriteMovieEntryItem(position);
-        if (currentMovie != null) {
-            launchDetailActivity(currentMovie);
-        } else if (currentFavoriteMovie != null) {
-            convertFavoriteAndLaunchDetailActivity(currentFavoriteMovie);
-        }
+    public void onFavoriteItemClick(int position) {
+        FavoriteMovieEntry currentFavoriteMovie = mFavoriteMovieRecyclerAdapter.getFavoriteMovieEntryItem(position);
+
+        convertFavoriteAndLaunchDetailActivity(currentFavoriteMovie);
     }
 
     private void convertFavoriteAndLaunchDetailActivity(FavoriteMovieEntry currentFavoriteMovie) {
@@ -287,6 +334,8 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         mMainBinding.progress.setVisibility(View.INVISIBLE);
         mMainBinding.empty.setVisibility(View.INVISIBLE);
     }
+
+
 }
 
 

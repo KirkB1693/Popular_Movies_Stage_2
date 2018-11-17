@@ -20,7 +20,7 @@ public class MovieUrlConstants {
 
     final public static String API_PARAM = "api_key";
 
-    final public static String SORT_BY_DEFAULT = "popular";
+    final public static String SORT_BY_MOST_POPULAR_DEFAULT = "popular";
 
     final public static String SORT_BY_HIGHEST_RATED = "top_rated";
 

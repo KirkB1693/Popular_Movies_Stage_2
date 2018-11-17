@@ -16,7 +16,7 @@ public class CheckPreferences {
         String preferredSortOrder = sp.getString(keyForSortOrder, defaultSortOrder);
 
         if (preferredSortOrder.equals(defaultSortOrder)) {
-            return MovieUrlConstants.SORT_BY_DEFAULT;
+            return MovieUrlConstants.SORT_BY_MOST_POPULAR_DEFAULT;
         } else {
             return MovieUrlConstants.SORT_BY_HIGHEST_RATED;
         }

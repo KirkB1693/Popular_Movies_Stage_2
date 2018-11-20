@@ -42,7 +42,7 @@ public class MovieRecyclerViewAdapter extends RecyclerView.Adapter<MovieRecycler
             holder.itemView.setTag(mMovies.get(position));
             MoviesModel movie = mMovies.get(position);
             String fullPosterPath = MovieUrlConstants.BASE_POSTER_URL + MovieUrlConstants.DEFAULT_POSTER_SIZE + movie.getPosterPath();
-            Picasso.with(mContext).load(fullPosterPath).into(holder.myImageView);
+            Picasso.with(mContext).load(fullPosterPath).fit().placeholder(R.drawable.ic_movie_loading).into(holder.myImageView);
     }
 
     // total number of cells

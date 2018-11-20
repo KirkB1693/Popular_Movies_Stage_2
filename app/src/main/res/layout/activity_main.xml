@@ -1,33 +1,89 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
     <RelativeLayout
+        android:id="@+id/rl_main"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         tools:context=".MainActivity">
 
-        <android.support.v7.widget.RecyclerView
-            android:id="@+id/rv_movie_poster_grid"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+    <android.support.design.widget.CoordinatorLayout
+        android:id="@+id/app_bar_container_main"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fitsSystemWindows="true"
+        tools:mContext=".MainActivity">
 
-        <!-- Layout for an empty view, only visible when grid has no items -->
-        <TextView
-            android:id="@+id/empty"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
-            android:textAppearance="?android:textAppearanceMedium"
-            android:visibility="invisible" />
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
 
-        <!-- Progress spinner while loading a list of movies -->
-        <ProgressBar
-            android:id="@+id/progress"
-            style="@style/Widget.AppCompat.ProgressBar"
-            android:layout_width="wrap_content"
+            <android.support.v7.widget.RecyclerView
+                android:id="@+id/rv_movie_poster_grid"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/app_bar_main"/>
+
+            <!-- Layout for an empty view, only visible when grid has no items -->
+            <android.support.constraint.ConstraintLayout
+                android:id="@+id/empty"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_below="@+id/app_bar_main">
+
+                <ImageView
+                    android:id="@+id/iv_movie_theater"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitXY"
+                    android:src="@drawable/movie_theater_screen"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <TextView
+                    android:id="@+id/tv_empty"
+                    style="@style/EmptyViewStyle"
+                    app:layout_constraintBottom_toBottomOf="@+id/iv_movie_theater"
+                    app:layout_constraintEnd_toEndOf="@+id/iv_movie_theater"
+                    app:layout_constraintStart_toStartOf="@+id/iv_movie_theater"
+                    app:layout_constraintTop_toTopOf="@+id/iv_movie_theater"
+                    app:layout_constraintVertical_bias="0.3"
+                    tools:text="Empty Text Sample\nSample Line 2" />
+            </android.support.constraint.ConstraintLayout>
+
+            <!-- Progress spinner while loading a list of movies -->
+            <ProgressBar
+                android:id="@+id/progress"
+                style="@style/Widget.AppCompat.ProgressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:visibility="invisible" />
+
+
+        <android.support.design.widget.AppBarLayout
+            android:id="@+id/app_bar_main"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
-            android:visibility="invisible" />
+            android:theme="@style/AppTheme.AppBar">
+
+            <android.support.v7.widget.Toolbar
+                android:id="@+id/toolbar_main"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="?attr/colorPrimary"
+                android:elevation="4dp"
+                android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
+                app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+
+        </android.support.design.widget.AppBarLayout>
     </RelativeLayout>
+
+    </android.support.design.widget.CoordinatorLayout>
+    </RelativeLayout>
+
 </layout>

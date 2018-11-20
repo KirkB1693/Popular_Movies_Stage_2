@@ -30,4 +30,10 @@
     <string name="pref_enable_notifications_label">Movie Notifications</string>
     <string name="error_no_trailers_found">Something went wrong…  No trailers found!</string>
     <string name="reviews_label">Reviews</string>
+    <string name="title_main_favorite">Favorites</string>
+    <string name="title_main_all_movies">All Movies</string>
+    <string name="subtitle_popularity">By Popularity</string>
+    <string name="subtitle_user_rating">By User Rating</string>
+    <string name="text_no_movies_in_db">No Favorite Movies in Database\n\nPlease choose some favorites!</string>
+    <string name="error_movies_null">Error!  Favorite Movies came back null</string>
 </resources>

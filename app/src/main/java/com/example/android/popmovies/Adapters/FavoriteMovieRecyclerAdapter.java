@@ -42,6 +42,7 @@ public class FavoriteMovieRecyclerAdapter extends RecyclerView.Adapter<FavoriteM
         holder.itemView.setTag(mFavoriteMovieEntries.get(position));
         FavoriteMovieEntry favoriteMovieEntry = mFavoriteMovieEntries.get(position);
         Bitmap bitmap = BitmapFactory.decodeByteArray(favoriteMovieEntry.getPoster(), 0, favoriteMovieEntry.getPoster().length);
+        holder.myImageView.setScaleType(ImageView.ScaleType.FIT_XY);
         holder.myImageView.setImageBitmap(bitmap);
     }
 

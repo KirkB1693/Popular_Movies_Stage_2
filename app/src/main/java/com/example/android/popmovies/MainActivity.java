@@ -5,12 +5,14 @@ import android.arch.lifecycle.ViewModelProviders;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.databinding.DataBindingUtil;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -28,6 +30,7 @@ import com.example.android.popmovies.Utilities.ApiService;
 import com.example.android.popmovies.Utilities.CalcNumOfColumns;
 import com.example.android.popmovies.Utilities.CheckPreferences;
 import com.example.android.popmovies.Utilities.ConnectedToInternet;
+import com.example.android.popmovies.Utilities.GridSpacesItemDecoration;
 import com.example.android.popmovies.ViewModels.FavoriteMovieViewModel;
 import com.example.android.popmovies.databinding.ActivityMainBinding;
 
@@ -65,10 +68,16 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mMainBinding = DataBindingUtil.setContentView(this, R.layout.activity_main);
+        Toolbar toolbar = mMainBinding.toolbarMain;
+        setSupportActionBar(toolbar);
+        toolbar.setTitle(getTitle());
+
+
         mRecyclerView = mMainBinding.rvMoviePosterGrid;
 
         mDisplayFavorites = CheckPreferences.getDisplayFavoritesFromPreferences(this);
         mSortOrder = CheckPreferences.getSortOrderFromPreferences(this);
+        setTitleFromPreferences();
         mFavoriteMovieViewModel = ViewModelProviders.of(this).get(FavoriteMovieViewModel.class);
         mMainBinding.empty.setVisibility(View.VISIBLE);
 
@@ -76,11 +85,15 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
         mWebMoviesRecyclerAdapter = new MovieRecyclerViewAdapter(this, new ArrayList<MoviesModel>());
 
-
-        int mNoOfColumns = CalcNumOfColumns.calculateNoOfColumns(getApplicationContext());
-        GridLayoutManager layoutManager = new GridLayoutManager(this, mNoOfColumns, LinearLayoutManager.VERTICAL, false);
+        int noOfColumns = CalcNumOfColumns.calculateNoOfColumns(this);
+        GridLayoutManager layoutManager = new GridLayoutManager(this, noOfColumns, LinearLayoutManager.VERTICAL, false);
         mRecyclerView.setLayoutManager(layoutManager);
         mRecyclerView.setHasFixedSize(true);
+        int spacing = CalcNumOfColumns.calculateSpacing(this);
+        mRecyclerView.addItemDecoration(new GridSpacesItemDecoration(noOfColumns, 15, true, 0));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            mMainBinding.rlMain.setBackgroundColor(getColor(R.color.colorPrimaryDark));
+        }
         if (mRecyclerView.getAdapter() == null) {
             if (ConnectedToInternet.isConnectedToInternet(this) && !mDisplayFavorites) {
                 // Load Movies from Web
@@ -93,13 +106,31 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                 // Set progress bar and recycler view visibility to gone
                 showEmptyState();
                 // Set empty state text to display "No internet connection."
-                mMainBinding.empty.setText(R.string.no_internet);
+                mMainBinding.tvEmpty.setText(R.string.no_internet);
 
             }
         }
 
 
 
+    }
+
+
+    private void setTitleFromPreferences() {
+        String mainTitle;
+        String subTitle;
+        if (mDisplayFavorites) {
+            mainTitle = getString(R.string.title_main_favorite);
+        } else {
+            mainTitle = getString(R.string.title_main_all_movies);
+        }
+        if (mSortOrder.equals(MovieUrlConstants.SORT_BY_MOST_POPULAR_DEFAULT)) {
+            subTitle = getString(R.string.subtitle_popularity);
+        } else {
+            subTitle = getString(R.string.subtitle_user_rating);
+        }
+
+        setTitle(mainTitle + " - " + subTitle);
     }
 
 
@@ -122,34 +153,40 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
             mFavoriteMovieViewModel.getAllMoviesByPopularity().observe(this, new Observer<List<FavoriteMovieEntry>>() {
                 @Override
                 public void onChanged(@Nullable final List<FavoriteMovieEntry> favoriteMovieEntries) {
-                    showMovieGridView();
-                    mFavoriteMovieRecyclerAdapter.setMovieData(favoriteMovieEntries);
+                    if (favoriteMovieEntries != null) {
+                        if (favoriteMovieEntries.size()>0) {
+                            showMovieGridView();
+                            mFavoriteMovieRecyclerAdapter.setMovieData(favoriteMovieEntries);
+                        } else {
+                            showEmptyState();
+                            mMainBinding.tvEmpty.setText(R.string.text_no_movies_in_db);
+                        }
+                    } else {
+                        showEmptyState();
+                        mMainBinding.tvEmpty.setText(R.string.error_movies_null);
+                    }
+
                 }
             });
         } else {
             mFavoriteMovieViewModel.getAllMoviesByHighestRated().observe(this, new Observer<List<FavoriteMovieEntry>>() {
                 @Override
                 public void onChanged(@Nullable List<FavoriteMovieEntry> favoriteMovieEntries) {
-                    showMovieGridView();
-                    mFavoriteMovieRecyclerAdapter.setMovieData(favoriteMovieEntries);
+                    if (favoriteMovieEntries != null) {
+                        if (favoriteMovieEntries.size()>0) {
+                            showMovieGridView();
+                            mFavoriteMovieRecyclerAdapter.setMovieData(favoriteMovieEntries);
+                        } else {
+                            showEmptyState();
+                            mMainBinding.tvEmpty.setText(R.string.text_no_movies_in_db);
+                        }
+                    } else {
+                        showEmptyState();
+                        mMainBinding.tvEmpty.setText(R.string.error_movies_null);
+                    }
                 }
             });
         }
-       /*
-       *TODO Move this code to Detail Activity, search results are the results of a search such as findMovie(id)
-       *
-       * mFavoriteMovieViewModel.getSearchResults().observe(this,
-                new Observer<List<FavoriteMovieEntry>>() {
-                    @Override
-                    public void onChanged(@Nullable final List<FavoriteMovieEntry> favoriteMovieEntries) {
-
-                        if (favoriteMovieEntries.size() > 0) {
-                            // TODO if at least 1 movie matches the search results get data from first result
-                        } else {
-                            // TODO let user know that Movie Id was not found in search results
-                        }
-                    }
-                });*/
     }
 
 
@@ -184,7 +221,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
     private void checkPreferences() {
         mDisplayFavorites = CheckPreferences.getDisplayFavoritesFromPreferences(this);
-
         if (ConnectedToInternet.isConnectedToInternet(this) && !mDisplayFavorites) {
             // Create a new adapter that takes an empty list of movies as input
             updateUiFromWeb();
@@ -195,7 +231,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
             // Set progress bar and recycler view visibility to gone
             showEmptyState();
             // Set empty state text to display "No internet connection."
-            mMainBinding.empty.setText(R.string.no_internet);
+            mMainBinding.tvEmpty.setText(R.string.no_internet);
 
         }
     }
@@ -240,7 +276,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                     // Set empty state text to display "No movies found."
                     if (moviesModelList == null || moviesModelList.isEmpty()) {
                         showEmptyState();
-                        mMainBinding.empty.setText(R.string.error_no_movies_found);
+                        mMainBinding.tvEmpty.setText(R.string.error_no_movies_found);
                     }
                     // If there is a valid list of {@link MoviesModel}s, then add them to the adapter's
                     // data set. This will trigger the RecyclerView Grid to update.
@@ -285,7 +321,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         } else {
             showEmptyState();
             // Set empty state text to display "No internet connection."
-            mMainBinding.empty.setText(R.string.no_internet);
+            mMainBinding.tvEmpty.setText(R.string.no_internet);
         }
 
         return super.onOptionsItemSelected(item);
@@ -310,6 +346,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         currentMovie.setTitle(currentFavoriteMovie.getTitle());
         currentMovie.setOriginalTitle(currentFavoriteMovie.getOriginalTitle());
         currentMovie.setPosterPath(currentFavoriteMovie.getPosterPath());
+        currentMovie.setOverview(currentFavoriteMovie.getSynopsis());
         currentMovie.setPopularity(Float.parseFloat(currentFavoriteMovie.getPopularity()));
         currentMovie.setBackdropPath(currentFavoriteMovie.getBackdropPath());
         currentMovie.setVoteAverage(Float.parseFloat(currentFavoriteMovie.getUserRating()));
@@ -330,6 +367,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     }
 
     private void showMovieGridView() {
+        setTitleFromPreferences();
         mMainBinding.rvMoviePosterGrid.setVisibility(View.VISIBLE);
         mMainBinding.progress.setVisibility(View.INVISIBLE);
         mMainBinding.empty.setVisibility(View.INVISIBLE);

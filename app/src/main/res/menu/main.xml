@@ -3,10 +3,53 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context=".MainActivity">
 
-    <item
-        android:id="@+id/settings"
-        android:orderInCategory="1"
-        android:title="@string/action_settings"
-        app:showAsAction="ifRoom" />
 
+    <item
+        android:id="@+id/menu_sort"
+        android:title="Sort"
+        android:icon="@drawable/ic_sort"
+        android:visible="true"
+        app:showAsAction="ifRoom">
+
+        <menu>
+            <group
+                android:id="@+id/menu_sort_group"
+                android:checkableBehavior="single">
+
+                <item
+                    android:id="@+id/menu_sort_popularity"
+                    android:checked="true"
+                    android:title="@string/action_most_popular" />
+
+                <item
+                    android:id="@+id/menu_sort_top_rated"
+                    android:title="@string/action_highest_rated" />
+
+            </group>
+        </menu>
+    </item>
+    <item
+        android:id="@+id/menu_favorite"
+        android:title="Show Favorites"
+        android:icon="@drawable/glossy_heart"
+        android:visible="true"
+        app:showAsAction="ifRoom">
+        <menu>
+            <group
+                android:id="@+id/menu_favorite_group"
+                android:checkableBehavior="single">
+
+                <item
+                    android:id="@+id/show_favorites"
+                    android:checked="true"
+                    android:title="@string/pref_show_favorites_summary_on" />
+
+                <item
+                    android:id="@+id/show_web_results"
+                    android:title="@string/pref_show_favorites_summary_off" />
+
+            </group>
+        </menu>
+
+    </item>
 </menu>

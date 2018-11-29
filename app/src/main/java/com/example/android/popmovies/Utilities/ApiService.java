@@ -13,10 +13,10 @@ import retrofit2.http.Query;
 public interface ApiService {
 
     @GET(MovieUrlConstants.SORT_BY_MOST_POPULAR_DEFAULT)
-    Call<MoviesResponse> getPopularMovies(@Query("api_key") String apiKey);
+    Call<MoviesResponse> getPopularMovies(@Query(MovieUrlConstants.API_PARAM) String apiKey, @Query(MovieUrlConstants.PAGE_URL_PARAM) int page);
 
     @GET(MovieUrlConstants.SORT_BY_HIGHEST_RATED)
-    Call<MoviesResponse> getTopRatedMovies(@Query("api_key") String apiKey);
+    Call<MoviesResponse> getTopRatedMovies(@Query("api_key") String apiKey, @Query("page") int page);
 
     //Trailers
     @GET("{movie_id}/" + MovieUrlConstants.TRAILERS_URL_ADDITIONAL_PATH)

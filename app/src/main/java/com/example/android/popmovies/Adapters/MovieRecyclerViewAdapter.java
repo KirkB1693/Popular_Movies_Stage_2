@@ -12,43 +12,51 @@ import com.example.android.popmovies.Data.MovieUrlConstants;
 import com.example.android.popmovies.JsonResponseModels.MoviesModel;
 import com.example.android.popmovies.R;
 import com.example.android.popmovies.Utilities.CheckPreferences;
+import com.example.android.popmovies.Utilities.GridUtils;
 import com.squareup.picasso.Picasso;
 
 import java.util.List;
 
 public class MovieRecyclerViewAdapter extends RecyclerView.Adapter<MovieRecyclerViewAdapter.ViewHolder> {
 
+
     private List<MoviesModel> mMovies;
     private WebItemClickListener mClickListener;
     private final Context mContext;
+
 
     // data is passed into the constructor
     public MovieRecyclerViewAdapter(Context context, List<MoviesModel> movies) {
         this.mMovies = movies;
         this.mContext = context;
+
     }
 
     // inflates the cell layout from xml when needed
     @Override
     @NonNull
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.movie_item, parent, false);
+        LayoutInflater inflater = LayoutInflater.from(parent.getContext());
+        View view = inflater.from(parent.getContext()).inflate(R.layout.movie_item, parent, false);
+
+        RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) view.getLayoutParams();
+        params.height = GridUtils.gridItemHeightInPixelsFromWidth(parent.getContext());
         return new ViewHolder(view);
     }
 
     // binds the image to the ImageView in each cell
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            holder.itemView.setTag(mMovies.get(position));
-            MoviesModel movie = mMovies.get(position);
-            String fullPosterPath = MovieUrlConstants.BASE_POSTER_URL + MovieUrlConstants.DEFAULT_POSTER_SIZE + movie.getPosterPath();
-            Picasso.with(mContext).load(fullPosterPath).fit().placeholder(R.drawable.ic_movie_loading).into(holder.myImageView);
+        holder.itemView.setTag(mMovies.get(position));
+        MoviesModel movie = mMovies.get(position);
+        String fullPosterPath = MovieUrlConstants.BASE_POSTER_URL + MovieUrlConstants.DEFAULT_POSTER_SIZE + movie.getPosterPath();
+        Picasso.with(mContext).load(fullPosterPath).fit().placeholder(R.drawable.ic_movie_loading).into(holder.myImageView);
     }
 
     // total number of cells
     @Override
     public int getItemCount() {
-                return mMovies.size();
+        return mMovies.size();
     }
 
 
@@ -79,12 +87,20 @@ public class MovieRecyclerViewAdapter extends RecyclerView.Adapter<MovieRecycler
 
     }
 
-
+    public List<MoviesModel> getMovieData() {
+        return mMovies;
+    }
 
     public void setMovieData(List<MoviesModel> movies) {
         clear();
-            mMovies = movies;
-            notifyDataSetChanged();
+        mMovies = movies;
+        notifyDataSetChanged();
+    }
+
+    public void addMovieData(List<MoviesModel> moreMovies) {
+        int curSize = getItemCount();
+        mMovies.addAll(moreMovies);
+        notifyItemRangeInserted(curSize, moreMovies.size());
     }
 
     // allows clicks events to be caught
@@ -109,4 +125,14 @@ public class MovieRecyclerViewAdapter extends RecyclerView.Adapter<MovieRecycler
             }
         }
     }
+
+    public void remove(MoviesModel moviesModel) {
+        int position = mMovies.indexOf(moviesModel);
+        if (position > -1) {
+            mMovies.remove(position);
+            notifyItemRemoved(position);
+        }
+    }
+
+
 }

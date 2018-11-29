@@ -14,6 +14,8 @@ public class MovieUrlConstants {
 
     final public static String DEFAULT_BACKDROP_SIZE = "w500/";
 
+    final public static String PAGE_URL_PARAM = "page";
+
     final public static String LANGUAGE_PARAM = "language";
 
     final public static String DEFAULT_LANGUAGE = "en-US";

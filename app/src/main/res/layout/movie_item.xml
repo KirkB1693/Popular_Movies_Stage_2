@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="wrap_content"
-    >
-    <ImageView
-        android:layout_width="match_parent"
-        android:layout_height="@dimen/movie_poster_height"
-        android:scaleType="fitCenter"
-        android:id="@+id/iv_movie_poster"
-        android:contentDescription="@string/movie_poster_content_description"/>
+<android.support.v7.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:cardCornerRadius="@dimen/cv_corner_radius"
+    android:backgroundTint="@android:color/black">
 
-</FrameLayout>
+    <ImageView
+        android:id="@+id/iv_movie_poster"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/movie_poster_content_description"
+        android:scaleType="fitCenter" />
+
+</android.support.v7.widget.CardView>

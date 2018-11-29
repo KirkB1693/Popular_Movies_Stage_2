@@ -7,6 +7,8 @@ import android.content.SharedPreferences;
 import android.databinding.DataBindingUtil;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Parcelable;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
@@ -27,10 +29,11 @@ import com.example.android.popmovies.JsonResponseModels.MoviesResponse;
 import com.example.android.popmovies.RoomDatabase.FavoriteMovieEntry;
 import com.example.android.popmovies.Utilities.ApiClient;
 import com.example.android.popmovies.Utilities.ApiService;
-import com.example.android.popmovies.Utilities.CalcNumOfColumns;
 import com.example.android.popmovies.Utilities.CheckPreferences;
 import com.example.android.popmovies.Utilities.ConnectedToInternet;
+import com.example.android.popmovies.Utilities.EndlessRecyclerOnScrollListener;
 import com.example.android.popmovies.Utilities.GridSpacesItemDecoration;
+import com.example.android.popmovies.Utilities.GridUtils;
 import com.example.android.popmovies.ViewModels.FavoriteMovieViewModel;
 import com.example.android.popmovies.databinding.ActivityMainBinding;
 
@@ -60,6 +63,30 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
     private String mSortOrder;
 
+    public static final int SPACING = 15;
+
+    private static final int FIRST_PAGE = 1;
+
+    private boolean mIsLastPage = false;
+
+    private int mTotalPages;
+
+    private ApiService mMovieApiService;
+
+    private int mCurrentPage = FIRST_PAGE;
+
+    private EndlessRecyclerOnScrollListener mRecyclerviewListener;
+
+    private MoviesResponse mMoviesResponse;
+
+    private final String KEY_RECYCLER_STATE = "recycler_state";
+
+    private static Bundle mBundleRecyclerViewState;
+
+    public static final String BUNDLE_MOVIES_RESPONSE_KEY = "movies_model";
+
+    public static final String BUNDLE_RECYCLER_STATE_KEY = "recycler_state";
+
     ActivityMainBinding mMainBinding;
 
 
@@ -72,8 +99,10 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         setSupportActionBar(toolbar);
         toolbar.setTitle(getTitle());
 
-
         mRecyclerView = mMainBinding.rvMoviePosterGrid;
+
+        Retrofit retrofit = ApiClient.getClient();
+        mMovieApiService = retrofit.create(ApiService.class);
 
         mDisplayFavorites = CheckPreferences.getDisplayFavoritesFromPreferences(this);
         mSortOrder = CheckPreferences.getSortOrderFromPreferences(this);
@@ -85,14 +114,41 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
         mWebMoviesRecyclerAdapter = new MovieRecyclerViewAdapter(this, new ArrayList<MoviesModel>());
 
-        int noOfColumns = CalcNumOfColumns.calculateNoOfColumns(this);
+        int noOfColumns = GridUtils.calculateNoOfColumns(this);
         GridLayoutManager layoutManager = new GridLayoutManager(this, noOfColumns, LinearLayoutManager.VERTICAL, false);
         mRecyclerView.setLayoutManager(layoutManager);
         mRecyclerView.setHasFixedSize(true);
-        int spacing = CalcNumOfColumns.calculateSpacing(this);
-        mRecyclerView.addItemDecoration(new GridSpacesItemDecoration(noOfColumns, 15, true, 0));
+
+//        int spacing = GridUtils.calculateSpacing(this);
+        mRecyclerView.addItemDecoration(new GridSpacesItemDecoration(noOfColumns, SPACING, true, 0));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             mMainBinding.rlMain.setBackgroundColor(getColor(R.color.colorPrimaryDark));
+        }
+        if (savedInstanceState != null) {
+            if (!mDisplayFavorites) {
+                setRecyclerAdapter(mWebMoviesRecyclerAdapter);
+                // restore RecyclerView state
+                Parcelable listState = savedInstanceState.getParcelable(KEY_RECYCLER_STATE);
+                mRecyclerView.getLayoutManager().onRestoreInstanceState(listState);
+                MoviesResponse tempMovie = savedInstanceState.getParcelable(BUNDLE_MOVIES_RESPONSE_KEY);
+                int position = savedInstanceState.getInt(BUNDLE_RECYCLER_STATE_KEY);
+                mCurrentPage = savedInstanceState.getInt("current_page");
+                if (tempMovie != null) {
+                    mMoviesResponse = tempMovie;
+
+                    List<MoviesModel> moviesModel = mMoviesResponse.getResults();
+                    mWebMoviesRecyclerAdapter = (new MovieRecyclerViewAdapter(this, moviesModel));
+                    setRecyclerAdapter(mWebMoviesRecyclerAdapter);
+                    addScrollListner();
+                    mWebMoviesRecyclerAdapter.setClickListener(this);
+                    mRecyclerView.getLayoutManager().scrollToPosition(position);
+                }
+            } else {
+                updateUiFromFavorites();
+                int position = savedInstanceState.getInt(BUNDLE_RECYCLER_STATE_KEY);
+                mRecyclerView.getLayoutManager().scrollToPosition(position);
+
+            }
         }
         if (mRecyclerView.getAdapter() == null) {
             if (ConnectedToInternet.isConnectedToInternet(this) && !mDisplayFavorites) {
@@ -112,7 +168,64 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         }
 
 
+    }
 
+    private void getMoreMovies() {
+        Toast.makeText(this, "Getting More Movies From the Web", Toast.LENGTH_SHORT).show();
+
+        try {
+            if (MovieUrlConstants.API_KEY.isEmpty()) {
+                Toast.makeText(getApplicationContext(), "API Key not found!!! Please obtain API Key from themoviedb.org", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+
+            showProgressBar();
+
+            String sortPreference = CheckPreferences.getSortOrderFromPreferences(this);
+            Call<MoviesResponse> call;
+            if (sortPreference.equals(MovieUrlConstants.SORT_BY_MOST_POPULAR_DEFAULT)) {
+                call = callMostPopularMoviesApi();
+            } else {
+                call = callTopRatedMoviesApi();
+            }
+
+            call.enqueue(new Callback<MoviesResponse>() {
+                @Override
+                public void onResponse(Call<MoviesResponse> call, Response<MoviesResponse> response) {
+                    mMoviesResponse = response.body();
+                    List<MoviesModel> moviesModelList = mMoviesResponse.getResults();
+                    // Toast "No movies found." if response has no movies
+                    if (moviesModelList == null || moviesModelList.isEmpty()) {
+                        Toast.makeText(getApplicationContext(), "No more movies found", Toast.LENGTH_SHORT).show();
+                    }
+                    // If there is a valid list of {@link MoviesModel}s, then add them to the adapter's
+                    // data set. This will trigger the RecyclerView Grid to update.
+                    if (moviesModelList != null && !moviesModelList.isEmpty()) {
+
+                        mTotalPages = response.body().getTotalPages();
+                        showMovieGridView();
+                        mWebMoviesRecyclerAdapter.addMovieData(moviesModelList);
+
+                        if (mCurrentPage == mTotalPages) {
+                            mIsLastPage = true;
+                        }
+                    }
+
+
+                }
+
+                @Override
+                public void onFailure(Call<MoviesResponse> call, Throwable t) {
+                    Log.d("Error", t.getMessage());
+                    Toast.makeText(MainActivity.this, "Error Fetching Data!", Toast.LENGTH_SHORT).show();
+
+                }
+            });
+        } catch (Exception e) {
+            Log.d("Error", e.getMessage());
+            Toast.makeText(this, e.toString(), Toast.LENGTH_SHORT).show();
+        }
     }
 
 
@@ -135,6 +248,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
 
     private void setRecyclerAdapter(RecyclerView.Adapter adapter) {
+        mRecyclerView.clearOnScrollListeners();
         mRecyclerView.setAdapter(adapter);
         checkEmptyDisplay();
     }
@@ -154,7 +268,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                 @Override
                 public void onChanged(@Nullable final List<FavoriteMovieEntry> favoriteMovieEntries) {
                     if (favoriteMovieEntries != null) {
-                        if (favoriteMovieEntries.size()>0) {
+                        if (favoriteMovieEntries.size() > 0) {
                             showMovieGridView();
                             mFavoriteMovieRecyclerAdapter.setMovieData(favoriteMovieEntries);
                         } else {
@@ -173,7 +287,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                 @Override
                 public void onChanged(@Nullable List<FavoriteMovieEntry> favoriteMovieEntries) {
                     if (favoriteMovieEntries != null) {
-                        if (favoriteMovieEntries.size()>0) {
+                        if (favoriteMovieEntries.size() > 0) {
                             showMovieGridView();
                             mFavoriteMovieRecyclerAdapter.setMovieData(favoriteMovieEntries);
                         } else {
@@ -191,6 +305,8 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
 
     private void updateUiFromFavorites() {
+        mRecyclerView.clearOnScrollListeners();
+        mCurrentPage = 1;
         showProgressBar();
         mFavoriteMovieRecyclerAdapter.setClickListener(this);
         setRecyclerAdapter(mFavoriteMovieRecyclerAdapter);
@@ -198,11 +314,26 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+
+        // save RecyclerView state
+        mBundleRecyclerViewState = new Bundle();
+        Parcelable listState = mRecyclerView.getLayoutManager().onSaveInstanceState();
+        mBundleRecyclerViewState.putParcelable(KEY_RECYCLER_STATE, listState);
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
 
-        checkPreferences();
-
+        // restore RecyclerView state
+        if (mBundleRecyclerViewState != null) {
+            Parcelable listState = mBundleRecyclerViewState.getParcelable(KEY_RECYCLER_STATE);
+            mRecyclerView.getLayoutManager().onRestoreInstanceState(listState);
+        } else {
+            checkPreferences();
+        }
     }
 
 
@@ -223,6 +354,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         mDisplayFavorites = CheckPreferences.getDisplayFavoritesFromPreferences(this);
         if (ConnectedToInternet.isConnectedToInternet(this) && !mDisplayFavorites) {
             // Create a new adapter that takes an empty list of movies as input
+            mWebMoviesRecyclerAdapter.clear();
             updateUiFromWeb();
 
         } else if (mDisplayFavorites) {
@@ -252,27 +384,27 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                 Toast.makeText(getApplicationContext(), "API Key not found!!! Please obtain API Key from themoviedb.org", Toast.LENGTH_SHORT).show();
                 return;
             }
-
+            mCurrentPage = 1;
 
             showProgressBar();
 
             mWebMoviesRecyclerAdapter.setClickListener(this);
             setRecyclerAdapter(mWebMoviesRecyclerAdapter);
-            Retrofit retrofit = ApiClient.getClient();
-            ApiService apiService = retrofit.create(ApiService.class);
+            addScrollListner();
 
             String sortPreference = CheckPreferences.getSortOrderFromPreferences(this);
             Call<MoviesResponse> call;
             if (sortPreference.equals(MovieUrlConstants.SORT_BY_MOST_POPULAR_DEFAULT)) {
-                call = apiService.getPopularMovies(MovieUrlConstants.API_KEY);
+                call = callMostPopularMoviesApi();
             } else {
-                call = apiService.getTopRatedMovies(MovieUrlConstants.API_KEY);
+                call = callTopRatedMoviesApi();
             }
 
             call.enqueue(new Callback<MoviesResponse>() {
                 @Override
                 public void onResponse(Call<MoviesResponse> call, Response<MoviesResponse> response) {
-                    List<MoviesModel> moviesModelList = response.body().getResults();
+                    mMoviesResponse = response.body();
+                    List<MoviesModel> moviesModelList = mMoviesResponse.getResults();
                     // Set empty state text to display "No movies found."
                     if (moviesModelList == null || moviesModelList.isEmpty()) {
                         showEmptyState();
@@ -281,8 +413,13 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                     // If there is a valid list of {@link MoviesModel}s, then add them to the adapter's
                     // data set. This will trigger the RecyclerView Grid to update.
                     if (moviesModelList != null && !moviesModelList.isEmpty()) {
+                        mTotalPages = response.body().getTotalPages();
                         showMovieGridView();
                         mWebMoviesRecyclerAdapter.setMovieData(moviesModelList);
+
+                        if (mCurrentPage == mTotalPages) {
+                            mIsLastPage = true;
+                        }
                     }
 
 
@@ -301,22 +438,89 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         }
     }
 
+    private void addScrollListner() {
+        mRecyclerView.addOnScrollListener(new EndlessRecyclerOnScrollListener() {
+            @Override
+            public void onLoadMore() {
+                mCurrentPage++;
+                getMoreMovies();
+            }
+
+            @Override
+            public int getTotalPageCount() {
+                return mTotalPages;
+            }
+
+            @Override
+            public boolean isLastPage() {
+                return mIsLastPage;
+            }
+        });
+    }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
+
+        // Restored Instance State
+        if (mSortOrder == MovieUrlConstants.SORT_BY_HIGHEST_RATED)
+            menu.findItem(R.id.menu_sort_top_rated).setChecked(true);
+        if (mDisplayFavorites == false)
+            menu.findItem(R.id.show_web_results).setChecked(true);
+
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         if (ConnectedToInternet.isConnectedToInternet(this)) {
             switch (id) {
-                case R.id.settings:
-                    startActivity(new Intent(this, SettingsActivity.class));
-                    return true;
+                case R.id.show_favorites:
+                    if (!mDisplayFavorites) {
+                        item.setChecked(true);
+                        SharedPreferences.Editor editor = preferences.edit();
+                        editor.putBoolean(getString(R.string.sp_key_show_favorites), getResources().getBoolean(R.bool.checked_show_favorites));
+                        editor.apply();
+                        setTitleFromPreferences();
+                        checkPreferences();
+                    }
+                    break;
+                case R.id.show_web_results:
+                    if (mDisplayFavorites) {
+                        item.setChecked(true);
+                        SharedPreferences.Editor editor = preferences.edit();
+                        editor.putBoolean(getString(R.string.sp_key_show_favorites), getResources().getBoolean(R.bool.unchecked_show_favorites));
+                        editor.apply();
+                        setTitleFromPreferences();
+                        checkPreferences();
+                    }
+                    break;
+                case R.id.menu_sort_popularity:
+                    if (mSortOrder.equals(MovieUrlConstants.SORT_BY_HIGHEST_RATED)) {
+                        item.setChecked(true);
+                        mSortOrder = MovieUrlConstants.SORT_BY_MOST_POPULAR_DEFAULT;
+                        SharedPreferences.Editor editor = preferences.edit();
+                        editor.putString(getString(R.string.sp_key_sort_order), getString(R.string.array_value_most_popular));
+                        editor.apply();
+                        setTitleFromPreferences();
+                        checkPreferences();
+                    }
+                    break;
+                case R.id.menu_sort_top_rated:
+                    if (mSortOrder.equals(MovieUrlConstants.SORT_BY_MOST_POPULAR_DEFAULT)) {
+                        item.setChecked(true);
+                        mSortOrder = MovieUrlConstants.SORT_BY_HIGHEST_RATED;
+                        SharedPreferences.Editor editor = preferences.edit();
+                        editor.putString(getString(R.string.sp_key_sort_order), getString(R.string.array_value_highest_rated));
+                        editor.apply();
+                        setTitleFromPreferences();
+                        checkPreferences();
+                    }
+                    break;
             }
         } else {
             showEmptyState();
@@ -371,6 +575,73 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         mMainBinding.rvMoviePosterGrid.setVisibility(View.VISIBLE);
         mMainBinding.progress.setVisibility(View.INVISIBLE);
         mMainBinding.empty.setVisibility(View.INVISIBLE);
+    }
+
+    /**
+     * Performs a Retrofit call to the top rated movies API.
+     * Same API call for Pagination.
+     * As {@link #mCurrentPage} will be incremented automatically
+     * by @{@link EndlessRecyclerOnScrollListener} to load next page.
+     */
+    private Call<MoviesResponse> callTopRatedMoviesApi() {
+        return mMovieApiService.getTopRatedMovies(
+                MovieUrlConstants.API_KEY,
+                mCurrentPage
+        );
+    }
+
+    /**
+     * Performs a Retrofit call to the most popular movies API.
+     * Same API call for Pagination.
+     * As {@link #mCurrentPage} will be incremented automatically
+     * by @{@link EndlessRecyclerOnScrollListener} to load next page.
+     */
+    private Call<MoviesResponse> callMostPopularMoviesApi() {
+        return mMovieApiService.getPopularMovies(
+                MovieUrlConstants.API_KEY,
+                mCurrentPage
+        );
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        // save RecyclerView state
+        Parcelable listState = mRecyclerView.getLayoutManager().onSaveInstanceState();
+        outState.putParcelable(KEY_RECYCLER_STATE, listState);
+
+        if (mRecyclerView.getAdapter() == mWebMoviesRecyclerAdapter && !mMoviesResponse.getResults().isEmpty()) {
+            GridLayoutManager layoutManager = (GridLayoutManager) mRecyclerView.getLayoutManager();
+            outState.putInt("current_page", mCurrentPage);
+            outState.putInt(BUNDLE_RECYCLER_STATE_KEY, layoutManager.findFirstCompletelyVisibleItemPosition());
+            mMoviesResponse.setResults(mWebMoviesRecyclerAdapter.getMovieData());
+            outState.putParcelable(BUNDLE_MOVIES_RESPONSE_KEY, mMoviesResponse);
+        }
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+
+        // restore RecyclerView state
+        if (savedInstanceState != null) {
+            Parcelable listState = savedInstanceState.getParcelable(KEY_RECYCLER_STATE);
+            mRecyclerView.getLayoutManager().onRestoreInstanceState(listState);
+        }
+        /*MoviesResponse tempMovie = savedInstanceState.getParcelable(BUNDLE_MOVIES_RESPONSE_KEY);
+        int position = savedInstanceState.getInt(BUNDLE_RECYCLER_STATE_KEY);
+        mCurrentPage = savedInstanceState.getInt("current_page");
+        if (tempMovie != null) {
+            mMoviesResponse = tempMovie;
+
+            List<MoviesModel> moviesModel = mMoviesResponse.getResults();
+            mWebMoviesRecyclerAdapter = (new MovieRecyclerViewAdapter(this, moviesModel));
+            setRecyclerAdapter(mWebMoviesRecyclerAdapter);
+            addScrollListner();
+            mRecyclerView.getLayoutManager().scrollToPosition(position);
+
+        }*/
     }
 
 

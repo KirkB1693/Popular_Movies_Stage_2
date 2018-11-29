@@ -34,7 +34,7 @@ import com.example.android.popmovies.JsonResponseModels.VideosResponse;
 import com.example.android.popmovies.RoomDatabase.FavoriteMovieEntry;
 import com.example.android.popmovies.Utilities.ApiClient;
 import com.example.android.popmovies.Utilities.ApiService;
-import com.example.android.popmovies.Utilities.CalcNumOfColumns;
+import com.example.android.popmovies.Utilities.GridUtils;
 import com.example.android.popmovies.Utilities.CheckPreferences;
 import com.example.android.popmovies.Utilities.ConnectedToInternet;
 import com.example.android.popmovies.ViewModels.FavoriteMovieViewModel;
@@ -84,12 +84,13 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
         mFavoriteMovieViewModel = new FavoriteMovieViewModel(getApplication());
         android.support.v7.widget.Toolbar toolbar = mDetailBinding.toolbarDetail;
         setSupportActionBar(toolbar);
-
+        mFavoriteMovieViewModel = ViewModelProviders.of(this).get(FavoriteMovieViewModel.class);
 
         ActionBar actionBar = getSupportActionBar();
-        actionBar.setDisplayHomeAsUpEnabled(true);
-        actionBar.setDisplayShowHomeEnabled(true);
-
+        if (actionBar != null) {
+            actionBar.setDisplayHomeAsUpEnabled(true);
+            actionBar.setDisplayShowHomeEnabled(true);
+        }
         setupUI();
 
         mDetailBinding.fab.setOnClickListener(new View.OnClickListener() {
@@ -110,6 +111,9 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
         } else {
             mCurrentMovie = intent.getParcelableExtra(CURRENT_MOVIE);
             checkSharedPreferencesForFavoriteStatus();
+            FavoriteMovieEntry entry = mMovieEntry;
+            observerForFavoritesSetup();
+            mFavoriteMovieViewModel.findMovie(Integer.toString(mCurrentMovie.getId()));
             if (mFavorite) {
                 populateUiFromFavorite(mCurrentMovie);
 
@@ -122,10 +126,6 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
     }
 
     private void populateUiFromFavorite(MoviesModel currentMovie) {
-        mFavoriteMovieViewModel = ViewModelProviders.of(this).get(FavoriteMovieViewModel.class);
-        observerForFavoritesSetup();
-        mFavoriteMovieViewModel.findMovie(Integer.toString(currentMovie.getId()));
-
         mDetailBinding.primaryMovieDetails.tvOriginalTitle.setText(currentMovie.getOriginalTitle());
         mDetailBinding.primaryMovieDetails.tvPlotSynopsis.setText(currentMovie.getOverview());
 
@@ -151,18 +151,23 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
 
     }
 
-    private void observerForFavoritesSetup() {mFavoriteMovieViewModel.getSearchResults().observe(this,
+    private void observerForFavoritesSetup() {
+        mFavoriteMovieViewModel.getSearchResults().observe(this,
                 new Observer<List<FavoriteMovieEntry>>() {
                     @Override
                     public void onChanged(@Nullable final List<FavoriteMovieEntry> favoriteMovieEntries) {
                         if (favoriteMovieEntries != null) {
                             if (favoriteMovieEntries.size() > 0) {
+                                mFavorite = true;
+                                changeFAB();
                                 mMovieEntry = favoriteMovieEntries.get(0);
                                 mDetailBinding.primaryMovieDetails.ivMoviePosterDetail.setImageBitmap(BitmapFactory.decodeByteArray(mMovieEntry.getPoster(), 0, mMovieEntry.getPoster().length));
                                 mDetailBinding.expandedImage.setImageBitmap(BitmapFactory.decodeByteArray(mMovieEntry.getBackdrop(), 0, mMovieEntry.getBackdrop().length));
                             }
                         } else {
-                            Toast.makeText(getApplicationContext(),"No Match to MovieId in Search Results", Toast.LENGTH_SHORT).show();
+                            if (mFavorite) {
+                                Toast.makeText(getApplicationContext(), "No Match to MovieId in Search Results", Toast.LENGTH_SHORT).show();
+                            }
                         }
                     }
                 });
@@ -208,7 +213,7 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
             // data set. This will trigger the RecyclerView Grid to update.
             if (mTrailerModel != null && !mTrailerModel.isEmpty()) {
                 showTrailerRecyclerView();
-                int mNoOfColumns = CalcNumOfColumns.calculateNoOfColumns(getApplicationContext());
+                int mNoOfColumns = GridUtils.calculateNoOfColumns(getApplicationContext());
                 GridLayoutManager mTrailerRecyclerViewLayoutManager = new GridLayoutManager(this, mNoOfColumns, LinearLayoutManager.VERTICAL, false);
                 mDetailBinding.movieTrailers.rvMovieTrailers.setLayoutManager(mTrailerRecyclerViewLayoutManager);
                 mDetailBinding.movieTrailers.rvMovieTrailers.setHasFixedSize(true);
@@ -334,9 +339,7 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
 
             changeFAB();
 
-            SharedPreferences.Editor editor = preferences.edit();
-            editor.putBoolean(getString(R.string.sp_key_show_favorites), getResources().getBoolean(R.bool.checked_show_favorites));
-            editor.apply();
+
             Toast.makeText(this, mDetailBinding.primaryMovieDetails.tvOriginalTitle.getText() + " added to Favorites", Toast.LENGTH_SHORT).show();
         } else {
             // if unchecked, deleted movie from favorite movies db and update preferences to show all movies
@@ -344,9 +347,7 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
 
             changeFAB();
 
-            SharedPreferences.Editor editor = preferences.edit();
-            editor.putBoolean(getString(R.string.sp_key_show_favorites), getResources().getBoolean(R.bool.unchecked_show_favorites));
-            editor.apply();
+
             Toast.makeText(this, mDetailBinding.primaryMovieDetails.tvOriginalTitle.getText() + " removed from Favorites", Toast.LENGTH_SHORT).show();
         }
 

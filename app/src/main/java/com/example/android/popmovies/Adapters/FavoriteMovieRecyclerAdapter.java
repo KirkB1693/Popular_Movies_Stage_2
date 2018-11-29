@@ -12,6 +12,7 @@ import android.widget.ImageView;
 
 import com.example.android.popmovies.R;
 import com.example.android.popmovies.RoomDatabase.FavoriteMovieEntry;
+import com.example.android.popmovies.Utilities.GridUtils;
 
 import java.util.List;
 
@@ -32,6 +33,8 @@ public class FavoriteMovieRecyclerAdapter extends RecyclerView.Adapter<FavoriteM
     @NonNull
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.movie_item, parent, false);
+        RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) view.getLayoutParams();
+        params.height = GridUtils.gridItemHeightInPixelsFromWidth(parent.getContext());
         return new ViewHolder(view);
     }
 

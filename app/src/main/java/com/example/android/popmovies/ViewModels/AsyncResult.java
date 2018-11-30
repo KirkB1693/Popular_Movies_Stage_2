@@ -4,6 +4,6 @@ import com.example.android.popmovies.RoomDatabase.FavoriteMovieEntry;
 
 import java.util.List;
 
-public interface AsyncResult {
+interface AsyncResult {
     void asyncFinished(List<FavoriteMovieEntry> results);
 }

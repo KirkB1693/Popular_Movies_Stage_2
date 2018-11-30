@@ -41,7 +41,7 @@ public class MoviesResponse implements Parcelable {
 
     };
 
-    protected MoviesResponse(Parcel in) {
+    private MoviesResponse(Parcel in) {
         this.page = ((int) in.readValue((int.class.getClassLoader())));
         this.totalResults = ((int) in.readValue((int.class.getClassLoader())));
         this.totalPages = ((int) in.readValue((int.class.getClassLoader())));
@@ -55,10 +55,10 @@ public class MoviesResponse implements Parcelable {
     }
 
     /**
-     * @param results
-     * @param totalResults
-     * @param page
-     * @param totalPages
+     * @param results the individual movie data
+     * @param totalResults the total number of movie results available
+     * @param page the page of the movie data provided
+     * @param totalPages the total pages of data available
      */
     public MoviesResponse(int page, int totalResults, int totalPages, List<MoviesModel> results) {
         super();

@@ -65,7 +65,7 @@ public class MoviesModel implements Parcelable
     }
             ;
 
-    protected MoviesModel(Parcel in) {
+    MoviesModel(Parcel in) {
         this.voteCount = ((int) in.readValue((int.class.getClassLoader())));
         this.id = ((int) in.readValue((int.class.getClassLoader())));
         this.video = ((boolean) in.readValue((boolean.class.getClassLoader())));
@@ -90,19 +90,19 @@ public class MoviesModel implements Parcelable
 
     /**
      *
-     * @param id
-     * @param title
-     * @param releaseDate
-     * @param overview
-     * @param posterPath
-     * @param originalTitle
-     * @param voteAverage
-     * @param originalLanguage
-     * @param adult
-     * @param backdropPath
-     * @param voteCount
-     * @param video
-     * @param popularity
+     * @param id Unique movie id
+     * @param title The movie title
+     * @param releaseDate The movie release date
+     * @param overview A synopsis of the movie
+     * @param posterPath the url for the poster image
+     * @param originalTitle the original movie title
+     * @param voteAverage the average user rating of the movie
+     * @param originalLanguage the original language of the movie
+     * @param adult is it an adult movie
+     * @param backdropPath the url for a backdrop image for the movie
+     * @param voteCount how many people have rated the movie
+     * @param video is this movie a video
+     * @param popularity the popularity index of the movie
      */
     public MoviesModel(int voteCount, int id, boolean video, float voteAverage, String title, float popularity, String posterPath, String originalLanguage, String originalTitle, String backdropPath, boolean adult, String overview, String releaseDate) {
         super();

@@ -50,7 +50,7 @@ public class VideosModel implements Parcelable
     }
             ;
 
-    protected VideosModel(Parcel in) {
+    VideosModel(Parcel in) {
         this.id = ((String) in.readValue((String.class.getClassLoader())));
         this.iso6391 = ((String) in.readValue((String.class.getClassLoader())));
         this.iso31661 = ((String) in.readValue((String.class.getClassLoader())));
@@ -72,11 +72,11 @@ public class VideosModel implements Parcelable
      *
      * @param site
      * @param iso6391
-     * @param id
+     * @param id the unique movie id
      * @param iso31661
      * @param name
      * @param type
-     * @param key
+     * @param key the unique movie key for locating the video on youtube
      * @param size
      */
     public VideosModel(String id, String iso6391, String iso31661, String key, String name, String site, int size, String type) {

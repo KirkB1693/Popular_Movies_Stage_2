@@ -9,6 +9,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
@@ -63,7 +64,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
     private String mSortOrder;
 
-    public static final int SPACING = 15;
+    private static final int SPACING = 15;
 
     private static final int FIRST_PAGE = 1;
 
@@ -75,19 +76,17 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
     private int mCurrentPage = FIRST_PAGE;
 
-    private EndlessRecyclerOnScrollListener mRecyclerviewListener;
-
     private MoviesResponse mMoviesResponse;
 
     private final String KEY_RECYCLER_STATE = "recycler_state";
 
     private static Bundle mBundleRecyclerViewState;
 
-    public static final String BUNDLE_MOVIES_RESPONSE_KEY = "movies_model";
+    private static final String BUNDLE_MOVIES_RESPONSE_KEY = "movies_model";
 
-    public static final String BUNDLE_RECYCLER_STATE_KEY = "recycler_state";
+    private static final String BUNDLE_RECYCLER_STATE_KEY = "recycler_state";
 
-    ActivityMainBinding mMainBinding;
+    private ActivityMainBinding mMainBinding;
 
 
     @Override
@@ -118,8 +117,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         GridLayoutManager layoutManager = new GridLayoutManager(this, noOfColumns, LinearLayoutManager.VERTICAL, false);
         mRecyclerView.setLayoutManager(layoutManager);
         mRecyclerView.setHasFixedSize(true);
-
-//        int spacing = GridUtils.calculateSpacing(this);
         mRecyclerView.addItemDecoration(new GridSpacesItemDecoration(noOfColumns, SPACING, true, 0));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             mMainBinding.rlMain.setBackgroundColor(getColor(R.color.colorPrimaryDark));
@@ -139,7 +136,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                     List<MoviesModel> moviesModel = mMoviesResponse.getResults();
                     mWebMoviesRecyclerAdapter = (new MovieRecyclerViewAdapter(this, moviesModel));
                     setRecyclerAdapter(mWebMoviesRecyclerAdapter);
-                    addScrollListner();
+                    addScrollListener();
                     mWebMoviesRecyclerAdapter.setClickListener(this);
                     mRecyclerView.getLayoutManager().scrollToPosition(position);
                 }
@@ -171,7 +168,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     }
 
     private void getMoreMovies() {
-        Toast.makeText(this, "Getting More Movies From the Web", Toast.LENGTH_SHORT).show();
+        Log.d(LOG_TAG, "TEST : Loading more movies");
 
         try {
             if (MovieUrlConstants.API_KEY.isEmpty()) {
@@ -179,8 +176,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                 return;
             }
 
-
-            showProgressBar();
 
             String sortPreference = CheckPreferences.getSortOrderFromPreferences(this);
             Call<MoviesResponse> call;
@@ -192,31 +187,31 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
             call.enqueue(new Callback<MoviesResponse>() {
                 @Override
-                public void onResponse(Call<MoviesResponse> call, Response<MoviesResponse> response) {
+                public void onResponse(@NonNull Call<MoviesResponse> call, @NonNull Response<MoviesResponse> response) {
                     mMoviesResponse = response.body();
-                    List<MoviesModel> moviesModelList = mMoviesResponse.getResults();
-                    // Toast "No movies found." if response has no movies
-                    if (moviesModelList == null || moviesModelList.isEmpty()) {
-                        Toast.makeText(getApplicationContext(), "No more movies found", Toast.LENGTH_SHORT).show();
-                    }
-                    // If there is a valid list of {@link MoviesModel}s, then add them to the adapter's
-                    // data set. This will trigger the RecyclerView Grid to update.
-                    if (moviesModelList != null && !moviesModelList.isEmpty()) {
+                    if (mMoviesResponse != null) {
+                        List<MoviesModel> moviesModelList = mMoviesResponse.getResults();
+                        // Toast "No movies found." if response has no movies
+                        if (moviesModelList == null || moviesModelList.isEmpty()) {
+                            Toast.makeText(getApplicationContext(), "No more movies found", Toast.LENGTH_SHORT).show();
+                        }
+                        // If there is a valid list of {@link MoviesModel}s, then add them to the adapter's
+                        // data set. This will trigger the RecyclerView Grid to update.
+                        if (moviesModelList != null && !moviesModelList.isEmpty()) {
 
-                        mTotalPages = response.body().getTotalPages();
-                        showMovieGridView();
-                        mWebMoviesRecyclerAdapter.addMovieData(moviesModelList);
+                            mTotalPages = response.body().getTotalPages();
+                            mWebMoviesRecyclerAdapter.addMovieData(moviesModelList);
 
-                        if (mCurrentPage == mTotalPages) {
-                            mIsLastPage = true;
+                            if (mCurrentPage == mTotalPages) {
+                                mIsLastPage = true;
+                            }
                         }
                     }
-
 
                 }
 
                 @Override
-                public void onFailure(Call<MoviesResponse> call, Throwable t) {
+                public void onFailure(@NonNull Call<MoviesResponse> call, @NonNull Throwable t) {
                     Log.d("Error", t.getMessage());
                     Toast.makeText(MainActivity.this, "Error Fetching Data!", Toast.LENGTH_SHORT).show();
 
@@ -369,7 +364,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     }
 
 
-    public void updateUiFromWeb() {
+    private void updateUiFromWeb() {
         // Clear the previous adapter
         setRecyclerAdapter(null);
 
@@ -390,7 +385,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
             mWebMoviesRecyclerAdapter.setClickListener(this);
             setRecyclerAdapter(mWebMoviesRecyclerAdapter);
-            addScrollListner();
+            addScrollListener();
 
             String sortPreference = CheckPreferences.getSortOrderFromPreferences(this);
             Call<MoviesResponse> call;
@@ -402,31 +397,32 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
             call.enqueue(new Callback<MoviesResponse>() {
                 @Override
-                public void onResponse(Call<MoviesResponse> call, Response<MoviesResponse> response) {
+                public void onResponse(@NonNull Call<MoviesResponse> call, @NonNull Response<MoviesResponse> response) {
                     mMoviesResponse = response.body();
-                    List<MoviesModel> moviesModelList = mMoviesResponse.getResults();
-                    // Set empty state text to display "No movies found."
-                    if (moviesModelList == null || moviesModelList.isEmpty()) {
-                        showEmptyState();
-                        mMainBinding.tvEmpty.setText(R.string.error_no_movies_found);
-                    }
-                    // If there is a valid list of {@link MoviesModel}s, then add them to the adapter's
-                    // data set. This will trigger the RecyclerView Grid to update.
-                    if (moviesModelList != null && !moviesModelList.isEmpty()) {
-                        mTotalPages = response.body().getTotalPages();
-                        showMovieGridView();
-                        mWebMoviesRecyclerAdapter.setMovieData(moviesModelList);
+                    if (mMoviesResponse != null) {
+                        List<MoviesModel> moviesModelList = mMoviesResponse.getResults();
+                        // Set empty state text to display "No movies found."
+                        if (moviesModelList == null || moviesModelList.isEmpty()) {
+                            showEmptyState();
+                            mMainBinding.tvEmpty.setText(R.string.error_no_movies_found);
+                        }
+                        // If there is a valid list of {@link MoviesModel}s, then add them to the adapter's
+                        // data set. This will trigger the RecyclerView Grid to update.
+                        if (moviesModelList != null && !moviesModelList.isEmpty()) {
+                            mTotalPages = response.body().getTotalPages();
+                            showMovieGridView();
+                            mWebMoviesRecyclerAdapter.setMovieData(moviesModelList);
 
-                        if (mCurrentPage == mTotalPages) {
-                            mIsLastPage = true;
+                            if (mCurrentPage == mTotalPages) {
+                                mIsLastPage = true;
+                            }
                         }
                     }
-
 
                 }
 
                 @Override
-                public void onFailure(Call<MoviesResponse> call, Throwable t) {
+                public void onFailure(@NonNull Call<MoviesResponse> call, @NonNull Throwable t) {
                     Log.d("Error", t.getMessage());
                     Toast.makeText(MainActivity.this, "Error Fetching Data!", Toast.LENGTH_SHORT).show();
 
@@ -438,17 +434,12 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         }
     }
 
-    private void addScrollListner() {
+    private void addScrollListener() {
         mRecyclerView.addOnScrollListener(new EndlessRecyclerOnScrollListener() {
             @Override
             public void onLoadMore() {
                 mCurrentPage++;
                 getMoreMovies();
-            }
-
-            @Override
-            public int getTotalPageCount() {
-                return mTotalPages;
             }
 
             @Override
@@ -464,9 +455,9 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         getMenuInflater().inflate(R.menu.main, menu);
 
         // Restored Instance State
-        if (mSortOrder == MovieUrlConstants.SORT_BY_HIGHEST_RATED)
+        if (mSortOrder.equals(MovieUrlConstants.SORT_BY_HIGHEST_RATED))
             menu.findItem(R.id.menu_sort_top_rated).setChecked(true);
-        if (mDisplayFavorites == false)
+        if (!mDisplayFavorites)
             menu.findItem(R.id.show_web_results).setChecked(true);
 
         return true;
@@ -477,7 +468,6 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         int id = item.getItemId();
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
 
-        if (ConnectedToInternet.isConnectedToInternet(this)) {
             switch (id) {
                 case R.id.show_favorites:
                     if (!mDisplayFavorites) {
@@ -522,11 +512,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                     }
                     break;
             }
-        } else {
-            showEmptyState();
-            // Set empty state text to display "No internet connection."
-            mMainBinding.tvEmpty.setText(R.string.no_internet);
-        }
+
 
         return super.onOptionsItemSelected(item);
     }
@@ -586,7 +572,8 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     private Call<MoviesResponse> callTopRatedMoviesApi() {
         return mMovieApiService.getTopRatedMovies(
                 MovieUrlConstants.API_KEY,
-                mCurrentPage
+                mCurrentPage,
+                MovieUrlConstants.DEFAULT_LANGUAGE
         );
     }
 
@@ -599,7 +586,8 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     private Call<MoviesResponse> callMostPopularMoviesApi() {
         return mMovieApiService.getPopularMovies(
                 MovieUrlConstants.API_KEY,
-                mCurrentPage
+                mCurrentPage,
+                MovieUrlConstants.DEFAULT_LANGUAGE
         );
     }
 
@@ -638,7 +626,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
             List<MoviesModel> moviesModel = mMoviesResponse.getResults();
             mWebMoviesRecyclerAdapter = (new MovieRecyclerViewAdapter(this, moviesModel));
             setRecyclerAdapter(mWebMoviesRecyclerAdapter);
-            addScrollListner();
+            addScrollListener();
             mRecyclerView.getLayoutManager().scrollToPosition(position);
 
         }*/

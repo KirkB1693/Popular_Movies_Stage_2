@@ -5,7 +5,6 @@ import android.arch.persistence.room.Dao;
 import android.arch.persistence.room.Insert;
 import android.arch.persistence.room.OnConflictStrategy;
 import android.arch.persistence.room.Query;
-import android.arch.persistence.room.Update;
 
 import com.example.android.popmovies.Data.MovieContract;
 
@@ -22,9 +21,6 @@ public interface FavoriteMovieDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insertMovie(FavoriteMovieEntry favoriteMovieEntry);
-
-    @Update(onConflict = OnConflictStrategy.REPLACE)
-    void updateMovie(FavoriteMovieEntry favoriteMovieEntry);
 
     @Query("DELETE FROM " + MovieContract.MovieEntry.TABLE_NAME + " WHERE "+ MovieContract.MovieEntry.COLUMN_MOVIE_ID +" = :id")
     void deleteMovie(String id);

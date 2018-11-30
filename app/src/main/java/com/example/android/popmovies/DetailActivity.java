@@ -5,20 +5,21 @@ import android.arch.lifecycle.ViewModelProviders;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.databinding.DataBindingUtil;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.util.Log;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
@@ -34,9 +35,9 @@ import com.example.android.popmovies.JsonResponseModels.VideosResponse;
 import com.example.android.popmovies.RoomDatabase.FavoriteMovieEntry;
 import com.example.android.popmovies.Utilities.ApiClient;
 import com.example.android.popmovies.Utilities.ApiService;
-import com.example.android.popmovies.Utilities.GridUtils;
 import com.example.android.popmovies.Utilities.CheckPreferences;
 import com.example.android.popmovies.Utilities.ConnectedToInternet;
+import com.example.android.popmovies.Utilities.GridUtils;
 import com.example.android.popmovies.ViewModels.FavoriteMovieViewModel;
 import com.example.android.popmovies.databinding.ActivityDetailBinding;
 import com.squareup.picasso.Picasso;
@@ -58,8 +59,6 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
 
     private TrailerRecyclerViewAdapter mTrailerRecyclerAdapter;
 
-    private ReviewRecyclerViewAdapter mReviewRecyclerAdapter;
-
     private List<VideosModel> mTrailerModel;
 
     private List<ReviewsModel> mReviewsModel;
@@ -71,6 +70,8 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
     private FavoriteMovieViewModel mFavoriteMovieViewModel;
 
     private boolean mFavorite;
+
+    private Menu mShareTrailerMenu;
 
     private ActivityDetailBinding mDetailBinding;
 
@@ -111,7 +112,6 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
         } else {
             mCurrentMovie = intent.getParcelableExtra(CURRENT_MOVIE);
             checkSharedPreferencesForFavoriteStatus();
-            FavoriteMovieEntry entry = mMovieEntry;
             observerForFavoritesSetup();
             mFavoriteMovieViewModel.findMovie(Integer.toString(mCurrentMovie.getId()));
             if (mFavorite) {
@@ -144,8 +144,10 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
             loadTrailersFromWeb(currentMovie.getId());
             loadReviewsFromWeb(currentMovie.getId());
         } else {
-            mDetailBinding.movieTrailers.emptyTrailers.setVisibility(View.VISIBLE);
-            mDetailBinding.movieTrailers.emptyTrailers.setText(getString(R.string.no_internet));
+            mDetailBinding.movieTrailersWrapper.emptyTrailers.setVisibility(View.VISIBLE);
+            mDetailBinding.movieTrailersWrapper.emptyTrailers.setText(R.string.no_internet);
+            mDetailBinding.movieReviewsWrapper.emptyReviews.setVisibility(View.VISIBLE);
+            mDetailBinding.movieReviewsWrapper.emptyReviews.setText(R.string.no_internet);
         }
 
 
@@ -197,8 +199,10 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
             loadTrailersFromWeb(currentMovie.getId());
             loadReviewsFromWeb(currentMovie.getId());
         } else {
-            mDetailBinding.movieTrailers.emptyTrailers.setVisibility(View.VISIBLE);
-            mDetailBinding.movieTrailers.emptyTrailers.setText(getString(R.string.no_internet));
+            mDetailBinding.movieTrailersWrapper.emptyTrailers.setVisibility(View.VISIBLE);
+            mDetailBinding.movieTrailersWrapper.emptyTrailers.setText(getString(R.string.no_internet));
+            mDetailBinding.movieReviewsWrapper.emptyReviews.setVisibility(View.VISIBLE);
+            mDetailBinding.movieReviewsWrapper.emptyReviews.setText(R.string.no_internet);
         }
     }
 
@@ -207,7 +211,7 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
             // Set empty state text to display "No trailers found."
             if (mTrailerModel == null || mTrailerModel.isEmpty()) {
                 showTrailersEmptyState();
-                mDetailBinding.movieTrailers.emptyTrailers.setText(R.string.error_no_trailers_found);
+                mDetailBinding.movieTrailersWrapper.emptyTrailers.setText(R.string.trailers_not_found);
             }
             // If there is a valid list of {@link VideosModel}s, then add them to the adapter's
             // data set. This will trigger the RecyclerView Grid to update.
@@ -215,11 +219,11 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
                 showTrailerRecyclerView();
                 int mNoOfColumns = GridUtils.calculateNoOfColumns(getApplicationContext());
                 GridLayoutManager mTrailerRecyclerViewLayoutManager = new GridLayoutManager(this, mNoOfColumns, LinearLayoutManager.VERTICAL, false);
-                mDetailBinding.movieTrailers.rvMovieTrailers.setLayoutManager(mTrailerRecyclerViewLayoutManager);
-                mDetailBinding.movieTrailers.rvMovieTrailers.setHasFixedSize(true);
+                mDetailBinding.movieTrailersWrapper.rvMovieTrailers.setLayoutManager(mTrailerRecyclerViewLayoutManager);
+                mDetailBinding.movieTrailersWrapper.rvMovieTrailers.setHasFixedSize(true);
                 mTrailerRecyclerAdapter = new TrailerRecyclerViewAdapter(this, mTrailerModel);
                 mTrailerRecyclerAdapter.setClickListener(this);
-                mDetailBinding.movieTrailers.rvMovieTrailers.setAdapter(mTrailerRecyclerAdapter);
+                mDetailBinding.movieTrailersWrapper.rvMovieTrailers.setAdapter(mTrailerRecyclerAdapter);
             }
 
 
@@ -227,7 +231,7 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
             // Set recycler view visibility to gone
             showTrailersEmptyState();
             // Set empty state text to display "No internet connection."
-            mDetailBinding.movieTrailers.emptyTrailers.setText(R.string.no_internet);
+            mDetailBinding.movieTrailersWrapper.emptyTrailers.setText(R.string.no_internet);
 
         }
     }
@@ -236,13 +240,20 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
     private void showReviews() {
         if (ConnectedToInternet.isConnectedToInternet(this)) {
             if (mReviewsModel != null && !mReviewsModel.isEmpty()) {
+                showReviewsRecyclerView();
                 LinearLayoutManager mReviewRecyclerViewLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
-                mDetailBinding.movieTrailers.rvMovieReviews.setLayoutManager(mReviewRecyclerViewLayoutManager);
-                mDetailBinding.movieTrailers.rvMovieReviews.setHasFixedSize(true);
-                mReviewRecyclerAdapter = new ReviewRecyclerViewAdapter(this, mReviewsModel);
+                mDetailBinding.movieReviewsWrapper.rvMovieReviews.setLayoutManager(mReviewRecyclerViewLayoutManager);
+                mDetailBinding.movieReviewsWrapper.rvMovieReviews.setHasFixedSize(true);
+                ReviewRecyclerViewAdapter mReviewRecyclerAdapter = new ReviewRecyclerViewAdapter(this, mReviewsModel);
                 mReviewRecyclerAdapter.setClickListener(this);
-                mDetailBinding.movieTrailers.rvMovieReviews.setAdapter(mReviewRecyclerAdapter);
+                mDetailBinding.movieReviewsWrapper.rvMovieReviews.setAdapter(mReviewRecyclerAdapter);
+            } else {
+                showReviewsEmptyState();
+                mDetailBinding.movieReviewsWrapper.emptyReviews.setText(R.string.reviews_not_found);
             }
+        } else {
+            showReviewsEmptyState();
+            mDetailBinding.movieReviewsWrapper.emptyReviews.setText(R.string.no_internet);
         }
     }
 
@@ -255,13 +266,15 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
 
             call.enqueue(new Callback<VideosResponse>() {
                 @Override
-                public void onResponse(Call<VideosResponse> call, Response<VideosResponse> response) {
-                    mTrailerModel = response.body().getResults();
-                    showTrailers();
+                public void onResponse(@NonNull Call<VideosResponse> call, @NonNull Response<VideosResponse> response) {
+                    if (response.body() != null) {
+                        mTrailerModel = response.body().getResults();
+                        showTrailers();
+                    }
                 }
 
                 @Override
-                public void onFailure(Call<VideosResponse> call, Throwable t) {
+                public void onFailure(@NonNull Call<VideosResponse> call, @NonNull Throwable t) {
                     Log.d("Error", t.getMessage());
                     Toast.makeText(DetailActivity.this, "Error Fetching Trailer Data!", Toast.LENGTH_SHORT).show();
 
@@ -283,13 +296,15 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
 
             call.enqueue(new Callback<ReviewsResponse>() {
                 @Override
-                public void onResponse(Call<ReviewsResponse> call, Response<ReviewsResponse> response) {
-                    mReviewsModel = response.body().getResults();
-                    showReviews();
+                public void onResponse(@NonNull Call<ReviewsResponse> call, @NonNull Response<ReviewsResponse> response) {
+                    if (response.body() != null) {
+                        mReviewsModel = response.body().getResults();
+                        showReviews();
+                    }
                 }
 
                 @Override
-                public void onFailure(Call<ReviewsResponse> call, Throwable t) {
+                public void onFailure(@NonNull Call<ReviewsResponse> call, @NonNull Throwable t) {
                     Log.d("Error", t.getMessage());
                     Toast.makeText(DetailActivity.this, "Error Fetching Review Data!", Toast.LENGTH_SHORT).show();
 
@@ -301,8 +316,7 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
         }
     }
 
-    public void onFavoriteFABClicked() {
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+    private void onFavoriteFABClicked() {
         mFavorite = !mFavorite;
         // if not currently a favorite, add movie to favorite movies db, change FAB and update preferences to show favorites
         if (mFavorite) {
@@ -368,8 +382,20 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.detail_menu, menu);
+        mShareTrailerMenu = menu;
+        return true;
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
+            case R.id.action_share:
+                if (mTrailerModel != null && mTrailerModel.size() != 0) {
+                    shareTrailer();
+                }
+                return true;
             case android.R.id.home:
                 Intent intent = new Intent(DetailActivity.this, MainActivity.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -384,16 +410,16 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
 
     @Override
     public void onReviewItemClick(int position) {
+        // Have chosen to not make reviews clickable at this time, to go to URL of original review uncomment block below
+
+        /*
         String currentReviewUrl = mReviewRecyclerAdapter.getItem(position);
         if (currentReviewUrl != null) {
-            launchWebsite(currentReviewUrl);
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setData(Uri.parse(currentReviewUrl));
+            startActivity(intent);
         }
-    }
-
-    private void launchWebsite(String currentReviewUrl) {
-        Intent intent = new Intent(Intent.ACTION_VIEW);
-        intent.setData(Uri.parse(currentReviewUrl));
-        startActivity(intent);
+        */
     }
 
     @Override
@@ -402,6 +428,25 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
         if (currentTrailer != null) {
             launchVideoActivity(this, currentTrailer);
         }
+    }
+
+    private void shareTrailer() {
+        Intent share = new Intent(Intent.ACTION_SEND);
+        share.setType("text/plain");
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            share.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            share.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
+        }
+
+        // Add data to the intent, the receiving app will decide
+        // what to do with it.
+        share.putExtra(Intent.EXTRA_SUBJECT, mTrailerModel.get(0).getName());
+        share.putExtra(Intent.EXTRA_TEXT, Uri.parse(MovieUrlConstants.BASE_YOUTUBE_URL + mTrailerModel.get(0).getKey()).toString());
+
+        startActivity(Intent.createChooser(share, getString(R.string.share_text_for_chooser) + mCurrentMovie.getTitle()));
+
     }
 
     private void launchVideoActivity(Context context, String currentTrailerId) {
@@ -416,15 +461,31 @@ public class DetailActivity extends AppCompatActivity implements TrailerRecycler
     }
 
     private void showTrailersEmptyState() {
-        mDetailBinding.movieTrailers.rvMovieTrailers.setVisibility(View.INVISIBLE);
-        mDetailBinding.movieTrailers.emptyTrailers.setVisibility(View.VISIBLE);
+        mDetailBinding.movieTrailersWrapper.rvMovieTrailers.setVisibility(View.INVISIBLE);
+        mDetailBinding.movieTrailersWrapper.emptyTrailers.setVisibility(View.VISIBLE);
+        if (mShareTrailerMenu != null) {
+            mShareTrailerMenu.findItem(R.id.action_share).setVisible(false);
+        }
     }
-
 
     private void showTrailerRecyclerView() {
-        mDetailBinding.movieTrailers.rvMovieTrailers.setVisibility(View.VISIBLE);
-        mDetailBinding.movieTrailers.emptyTrailers.setVisibility(View.INVISIBLE);
+        mDetailBinding.movieTrailersWrapper.rvMovieTrailers.setVisibility(View.VISIBLE);
+        mDetailBinding.movieTrailersWrapper.emptyTrailers.setVisibility(View.INVISIBLE);
+        if (mShareTrailerMenu != null) {
+            mShareTrailerMenu.findItem(R.id.action_share).setVisible(true);
+        }
     }
+
+    private void showReviewsEmptyState() {
+        mDetailBinding.movieReviewsWrapper.rvMovieReviews.setVisibility(View.INVISIBLE);
+        mDetailBinding.movieReviewsWrapper.emptyReviews.setVisibility(View.VISIBLE);
+    }
+
+    private void showReviewsRecyclerView() {
+        mDetailBinding.movieReviewsWrapper.rvMovieReviews.setVisibility(View.VISIBLE);
+        mDetailBinding.movieReviewsWrapper.emptyReviews.setVisibility(View.INVISIBLE);
+    }
+
 
     private void closeOnError() {
         finish();

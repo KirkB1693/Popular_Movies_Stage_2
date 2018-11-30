@@ -20,6 +20,8 @@ public class MovieUrlConstants {
 
     final public static String DEFAULT_LANGUAGE = "en-US";
 
+    final public static String MOVIE_ID_PATH = "movie_id";
+
     final public static String API_PARAM = "api_key";
 
     final public static String SORT_BY_MOST_POPULAR_DEFAULT = "popular";

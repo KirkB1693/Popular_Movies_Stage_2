@@ -11,11 +11,11 @@ import java.util.List;
 
 public class FavoriteMovieViewModel extends AndroidViewModel {
 
-    private FavoriteMovieRepository mRepository;
+    private final FavoriteMovieRepository mRepository;
 
-    private LiveData<List<FavoriteMovieEntry>> mAllMoviesByPopularity;
-    private LiveData<List<FavoriteMovieEntry>> mAllMoviesByHighestRated;
-    private MutableLiveData<List<FavoriteMovieEntry>> mSearchResults;
+    private final LiveData<List<FavoriteMovieEntry>> mAllMoviesByPopularity;
+    private final LiveData<List<FavoriteMovieEntry>> mAllMoviesByHighestRated;
+    private final MutableLiveData<List<FavoriteMovieEntry>> mSearchResults;
 
 
     public FavoriteMovieViewModel(Application application) {

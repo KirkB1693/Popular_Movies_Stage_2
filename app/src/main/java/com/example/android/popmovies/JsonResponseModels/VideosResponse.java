@@ -34,7 +34,7 @@ public class VideosResponse implements Parcelable
     }
             ;
 
-    protected VideosResponse(Parcel in) {
+    private VideosResponse(Parcel in) {
         this.id = ((int) in.readValue((int.class.getClassLoader())));
         in.readList(this.results, (VideosModel.class.getClassLoader()));
     }
@@ -48,8 +48,8 @@ public class VideosResponse implements Parcelable
 
     /**
      *
-     * @param id
-     * @param results
+     * @param id the unique movie id number
+     * @param results the video (trailer) data
      */
     public VideosResponse(int id, List<VideosModel> results) {
         super();

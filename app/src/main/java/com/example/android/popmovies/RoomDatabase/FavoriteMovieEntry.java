@@ -66,7 +66,7 @@ public class FavoriteMovieEntry {
         return this.movieId;
     }
 
-    public void setMovieId(String movieId) {
+    public void setMovieId(@NonNull String movieId) {
         this.movieId = movieId;
     }
 

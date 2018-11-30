@@ -40,11 +40,9 @@ public abstract class EndlessRecyclerOnScrollListener extends RecyclerView.OnScr
         }
     }
 
-    public abstract void onLoadMore();
+    protected abstract void onLoadMore();
 
-    public abstract int getTotalPageCount();
-
-    public abstract boolean isLastPage();
+    protected abstract boolean isLastPage();
 
 
 }

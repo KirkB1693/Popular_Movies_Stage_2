@@ -38,7 +38,7 @@ public class ReviewsModel implements Parcelable
     }
             ;
 
-    protected ReviewsModel(Parcel in) {
+    ReviewsModel(Parcel in) {
         this.author = ((String) in.readValue((String.class.getClassLoader())));
         this.content = ((String) in.readValue((String.class.getClassLoader())));
         this.id = ((String) in.readValue((String.class.getClassLoader())));
@@ -54,10 +54,10 @@ public class ReviewsModel implements Parcelable
 
     /**
      *
-     * @param id
-     * @param content
-     * @param author
-     * @param url
+     * @param id the unique movie id
+     * @param content the full content of the review
+     * @param author the author of the review
+     * @param url the url to see the full review on the web
      */
     public ReviewsModel(String author, String content, String id, String url) {
         super();

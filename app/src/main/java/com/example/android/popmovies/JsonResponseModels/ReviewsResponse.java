@@ -43,7 +43,7 @@ public class ReviewsResponse implements Parcelable
     }
             ;
 
-    protected ReviewsResponse(Parcel in) {
+    private ReviewsResponse(Parcel in) {
         this.id = ((int) in.readValue((int.class.getClassLoader())));
         this.page = ((int) in.readValue((int.class.getClassLoader())));
         in.readList(this.results, (ReviewsModel.class.getClassLoader()));
@@ -60,11 +60,11 @@ public class ReviewsResponse implements Parcelable
 
     /**
      *
-     * @param id
-     * @param results
-     * @param totalResults
-     * @param page
-     * @param totalPages
+     * @param id the unique movie id number
+     * @param results the reviews for this movie
+     * @param totalResults the total number of reviews available
+     * @param page the page of review data
+     * @param totalPages the total number of pages of review data available
      */
     public ReviewsResponse(int id, int page, List<ReviewsModel> results, int totalPages, int totalResults) {
         super();

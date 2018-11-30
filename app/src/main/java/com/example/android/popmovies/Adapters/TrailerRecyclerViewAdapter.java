@@ -40,7 +40,7 @@ public class TrailerRecyclerViewAdapter extends RecyclerView.Adapter<TrailerRecy
         VideosModel trailerId = mTrailerIds.get(position);
         holder.itemView.setTag(trailerId);
         String fullTrailerThumbnailPath = MovieUrlConstants.BASE_YOUTUBE_THUMBNAIL_URL + trailerId.getKey() + MovieUrlConstants.YOUTUBE_THUMBNAIL_OPTION;
-        Picasso.with(mContext).load(fullTrailerThumbnailPath).into(holder.myImageView);
+        Picasso.with(mContext).load(fullTrailerThumbnailPath).placeholder(R.drawable.ic_movie_loading).into(holder.myImageView);
 
     }
 
@@ -72,7 +72,7 @@ public class TrailerRecyclerViewAdapter extends RecyclerView.Adapter<TrailerRecy
         return mTrailerIds.get(id).getKey();
     }
 
-    void setMovieData (List<VideosModel> trailerIds){
+    void setTrailerData (List<VideosModel> trailerIds){
         mTrailerIds = trailerIds;
         notifyDataSetChanged();
     }

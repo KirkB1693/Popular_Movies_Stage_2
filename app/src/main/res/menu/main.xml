@@ -5,16 +5,13 @@
 
 
     <item
-        android:id="@+id/menu_sort"
-        android:title="Sort"
+        android:title="@string/action_sort_title"
         android:icon="@drawable/ic_sort"
         android:visible="true"
         app:showAsAction="ifRoom">
 
         <menu>
-            <group
-                android:id="@+id/menu_sort_group"
-                android:checkableBehavior="single">
+            <group android:checkableBehavior="single">
 
                 <item
                     android:id="@+id/menu_sort_popularity"
@@ -29,15 +26,12 @@
         </menu>
     </item>
     <item
-        android:id="@+id/menu_favorite"
-        android:title="Show Favorites"
-        android:icon="@drawable/glossy_heart"
+        android:title="@string/action_show_favorites_title"
+        android:icon="@drawable/ic_heart"
         android:visible="true"
         app:showAsAction="ifRoom">
         <menu>
-            <group
-                android:id="@+id/menu_favorite_group"
-                android:checkableBehavior="single">
+            <group android:checkableBehavior="single">
 
                 <item
                     android:id="@+id/show_favorites"

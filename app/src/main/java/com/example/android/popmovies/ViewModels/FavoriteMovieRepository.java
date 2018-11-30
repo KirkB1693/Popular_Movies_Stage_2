@@ -12,10 +12,10 @@ import com.example.android.popmovies.RoomDatabase.FavoriteMovieRoomDatabase;
 import java.util.List;
 
 public class FavoriteMovieRepository implements AsyncResult {
-    private FavoriteMovieDao mFavoriteMovieDao;
-    private LiveData<List<FavoriteMovieEntry>> mAllMoviesByPopularity;
-    private LiveData<List<FavoriteMovieEntry>> mAllMoviesByHighestRated;
-    private MutableLiveData<List<FavoriteMovieEntry>> mSearchResults = new MutableLiveData<>();
+    private final FavoriteMovieDao mFavoriteMovieDao;
+    private final LiveData<List<FavoriteMovieEntry>> mAllMoviesByPopularity;
+    private final LiveData<List<FavoriteMovieEntry>> mAllMoviesByHighestRated;
+    private final MutableLiveData<List<FavoriteMovieEntry>> mSearchResults = new MutableLiveData<>();
 
     FavoriteMovieRepository(Application application) {
         FavoriteMovieRoomDatabase db = FavoriteMovieRoomDatabase.getInstance(application);
@@ -60,7 +60,7 @@ public class FavoriteMovieRepository implements AsyncResult {
     private static class queryAsyncTask extends
             AsyncTask<String, Void, List<FavoriteMovieEntry>> {
 
-        private FavoriteMovieDao asyncTaskDao;
+        private final FavoriteMovieDao asyncTaskDao;
         private FavoriteMovieRepository delegate = null;
 
         queryAsyncTask(FavoriteMovieDao dao) {
@@ -79,7 +79,7 @@ public class FavoriteMovieRepository implements AsyncResult {
 
         private static class insertFavoriteMovieAsyncTask extends AsyncTask<FavoriteMovieEntry, Void, Void> {
 
-            private FavoriteMovieDao asyncTaskDao;
+            private final FavoriteMovieDao asyncTaskDao;
 
             insertFavoriteMovieAsyncTask(FavoriteMovieDao dao) {
                 asyncTaskDao = dao;
@@ -94,7 +94,7 @@ public class FavoriteMovieRepository implements AsyncResult {
 
         private static class deleteFavoriteMovieAsyncTask extends AsyncTask<String, Void, Void> {
 
-            private FavoriteMovieDao asyncTaskDao;
+            private final FavoriteMovieDao asyncTaskDao;
 
             deleteFavoriteMovieAsyncTask(FavoriteMovieDao dao) {
                 asyncTaskDao = dao;

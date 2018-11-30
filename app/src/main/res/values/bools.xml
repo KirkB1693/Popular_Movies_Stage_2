@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <bool name="pref_show_favorite_default">false</bool>
-    <bool name="show_notifications_by_default">true</bool>
     <bool name="checked_show_favorites">true</bool>
     <bool name="unchecked_show_favorites">false</bool>
 </resources>

@@ -6,10 +6,10 @@ import android.view.View;
 
 public class GridSpacesItemDecoration extends RecyclerView.ItemDecoration {
 
-    private int spanCount;
-    private int spacing;
-    private boolean includeEdge;
-    private int headerNum;
+    private final int spanCount;
+    private final int spacing;
+    private final boolean includeEdge;
+    private final int headerNum;
 
     public GridSpacesItemDecoration(int spanCount, int spacing, boolean includeEdge, int headerNum) {
         this.spanCount = spanCount;

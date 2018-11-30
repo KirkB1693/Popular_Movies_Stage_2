@@ -37,7 +37,7 @@ public class MovieRecyclerViewAdapter extends RecyclerView.Adapter<MovieRecycler
     @NonNull
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         LayoutInflater inflater = LayoutInflater.from(parent.getContext());
-        View view = inflater.from(parent.getContext()).inflate(R.layout.movie_item, parent, false);
+        View view = inflater.inflate(R.layout.movie_item, parent, false);
 
         RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) view.getLayoutParams();
         params.height = GridUtils.gridItemHeightInPixelsFromWidth(parent.getContext());

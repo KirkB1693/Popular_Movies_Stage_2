@@ -5,7 +5,8 @@
 
     <android.support.constraint.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:background="@color/colorPrimaryLight">
 
         <ImageView
             android:adjustViewBounds="true"
@@ -26,7 +27,8 @@
             style="@style/DetailTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:minLines="3"
+            android:minLines="2"
+            android:maxLines="3"
             android:layout_marginStart="16dp"
             android:layout_marginLeft="16dp"
             android:layout_marginTop="20dp"
@@ -68,15 +70,16 @@
 
         <RatingBar
             android:id="@+id/ratingBar"
+            android:theme="@style/RatingBar"
             style="@style/Widget.AppCompat.RatingBar.Small"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:isIndicator="true"
+            android:contentDescription="@string/cd_average_user_rating"
             android:numStars="10"
             android:rating="5"
             android:stepSize=".25"
-            android:progressTint="@android:color/holo_orange_light"
             app:layout_constraintEnd_toEndOf="@+id/tv_original_title"
             app:layout_constraintStart_toStartOf="@+id/tv_original_title"
             app:layout_constraintTop_toBottomOf="@+id/tv_release_date" />

@@ -20,14 +20,8 @@ public class GridUtils {
         }
         return noOfColumns;
     }
-    public static int calculateSpacing(Context context) {
 
-        int numberOfColumns = calculateNoOfColumns(context);
-
-        return remaining / (numberOfColumns + 1);
-    }
-
-    public static int gridItemWidthInPixels(Context context){
+    private static int gridItemWidthInPixels(Context context){
         DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
         float pixelWidth = displayMetrics.widthPixels;
         int noOfColumns = calculateNoOfColumns(context);

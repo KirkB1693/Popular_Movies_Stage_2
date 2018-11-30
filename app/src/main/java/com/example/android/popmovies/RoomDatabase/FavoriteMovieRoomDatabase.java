@@ -8,7 +8,7 @@ import android.util.Log;
 
 import com.example.android.popmovies.Data.MovieContract;
 
-@Database(entities = {FavoriteMovieEntry.class}, version = 1, exportSchema = true)
+@Database(entities = {FavoriteMovieEntry.class}, version = 1)
 public abstract class FavoriteMovieRoomDatabase extends RoomDatabase {
 
     private static final String LOG_TAG = FavoriteMovieRoomDatabase.class.getSimpleName();
